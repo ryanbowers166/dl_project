@@ -1,3 +1,6 @@
 numpy
 gymnasium
 matplotlib
+tensorboard
+stable-baselines3
+wandb
