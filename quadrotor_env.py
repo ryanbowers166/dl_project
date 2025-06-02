@@ -320,7 +320,7 @@ class QuadPole2D():
         info = self._get_info()
 
         # Compute cost terms
-        pos_cost = np.sum(np.abs(state[0:2])) + np.sum((state[0:2])**2)  # Position cost: L1 and L2 norms
+        #pos_cost = np.sum(np.abs(state[0:2])) + np.sum((state[0:2])**2)  # Position cost: L1 and L2 norms
         vel_cost = np.sum(state[2:4]**2)                                 # Velocity cost: L2 norm
         theta_cost = 1 - np.abs(state[5])                                # Quadrotor orientation cost (cosine of theta): 1 - cos(theta)
         omega_cost = state[6]**2                                         # Quadrotor angular velocity cost: L2 norm
@@ -330,7 +330,7 @@ class QuadPole2D():
         # Compute the reward using the timestep-scaled cost terms
         reward = 0
         reward += self.timestep * np.sum([
-            - 15.0*pos_cost,       
+            #- 15.0*pos_cost,
             - 0.5*vel_cost,       
             - 5.0*theta_cost,    
             - 5*omega_cost,
