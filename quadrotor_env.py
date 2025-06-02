@@ -22,7 +22,7 @@ class QuadPole2D():
 
         # Environment Parameters
         self.spatial_bounds = ((-2.0, 2.0), (-2.0, 2.0)) # Spatial bounds (x, y)
-        self.balance_radius = 0.25                       # Radius around origin for considering the system balanced (m)
+        self.balance_radius = 0.25                       # Radius around origin for considering the system balanced (m) (TODO: Removed for now, may add back when doing waypoint control)
         self.env_name = env_name                         # Environment name
         self._is_3d = False                              # 2D environment
         self._xbounds = self.spatial_bounds[0]
@@ -338,7 +338,7 @@ class QuadPole2D():
         ])
 
         # Apply a bonus reward if the quadrotor is balanced
-        if np.sum(state[0:2]**2)**0.5 < self.balance_radius and state[8] < -0.95 and abs(state[9]) < 0.1:
+        if state[8] < -0.95 and abs(state[9]) < 0.1: # Removed: np.sum(state[0:2]**2)**0.5 < self.balance_radius
             reward += 100*self.timestep
             self._time_balanced += self.timestep
         else:
