@@ -1,6 +1,10 @@
 from datetime import datetime
 import numpy as np
 import gymnasium as gym
+import matplotlib.pyplot as plt
+import matplotlib.backends.backend_agg as agg
+import pygame
+
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
@@ -131,7 +135,7 @@ class CustomMetricsCallback(BaseCallback):
 
         return True
 
-def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_models"):
+def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
     """
     Train a PPO agent on the QuadPole2D environment
 
@@ -238,6 +242,15 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
         n_episodes: Number of episodes to test
     """
 
+    # Initialize pygame
+    pygame.init()
+
+    # Set up display
+    width, height = 800, 600
+    screen = pygame.display.set_mode((width, height))
+    pygame.display.set_caption("QuadPole2D Environment Test")
+    clock = pygame.time.Clock()
+
     # Load the trained model
     model = PPO.load(model_path)
 
@@ -254,9 +267,70 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
         done = False
 
         while not done:
+            # Handle pygame events to prevent window from becoming unresponsive
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return episode_rewards, episode_lengths
+
             # Use the trained policy to select actions
             action, _states = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = env.step(action)
+
+            # Create matplotlib figure for rendering
+            fig, ax = plt.subplots(figsize=(8, 6))
+            ax.set_facecolor('lightblue')
+
+            # Render the environment - pass the observation to the render method
+            env.env.render(ax, observation=obs)  # Use env.env to access the QuadPole2D instance
+
+            # Add episode info to the plot
+            ax.text(0.02, 0.98, f'Episode: {episode + 1}',
+                    transform=ax.transAxes, fontsize=12,
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(0.02, 0.92, f'Step: {episode_length + 1}',
+                    transform=ax.transAxes, fontsize=12,
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(0.02, 0.86, f'Reward: {reward:.2f}',
+                    transform=ax.transAxes, fontsize=12,
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+            ax.text(0.02, 0.80, f'Total Reward: {episode_reward:.2f}',
+                    transform=ax.transAxes, fontsize=12,
+                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+            # Add action info
+            ax.text(0.98, 0.98, f'Action: [{action[0]:.2f}, {action[1]:.2f}]',
+                    transform=ax.transAxes, fontsize=12,
+                    verticalalignment='top', horizontalalignment='right',
+                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
+
+            ax.set_title(f'QuadPole2D - Episode {episode + 1}')
+            ax.grid(True, alpha=0.3)
+
+            # Convert matplotlib figure to pygame surface
+            canvas = agg.FigureCanvasAgg(fig)
+            canvas.draw()
+            renderer = canvas.get_renderer()
+
+            # Get the RGBA buffer and convert to RGB
+            buf = renderer.buffer_rgba()
+            size = canvas.get_width_height()
+
+            # Create pygame surface from matplotlib data
+            surf = pygame.image.frombuffer(buf, size, 'RGBA')
+
+            # Scale to fit screen if necessary
+            surf = pygame.transform.scale(surf, (width, height))
+
+            # Blit to screen
+            screen.blit(surf, (0, 0))
+            pygame.display.flip()
+
+            # Close matplotlib figure to free memory
+            plt.close(fig)
+
+            # Control frame rate
+            clock.tick(30)  # 30 FPS
 
             episode_reward += reward
             episode_length += 1
@@ -267,6 +341,7 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
 
         print(f"Episode {episode + 1}: Reward = {episode_reward:.2f}, Length = {episode_length}")
 
+    pygame.quit()
     print(f"\nAverage reward: {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
     print(f"Average episode length: {np.mean(episode_lengths):.2f} ± {np.std(episode_lengths):.2f}")
 
@@ -291,6 +366,7 @@ def visualize_performance(model_path="quadpole_ppo"):
     while not done:
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
+        env.render()
 
         trajectory.append(obs.copy())
         actions.append(action)
@@ -338,13 +414,13 @@ def visualize_performance(model_path="quadpole_ppo"):
 
 if __name__ == "__main__":
     # Train the agent
-    print("Training PPO agent on QuadPole2D environment...")
-    model = train_ppo_agent(total_timesteps=1500000, n_envs=8)
+    #print("Training PPO agent on QuadPole2D environment...")
+    #model = train_ppo_agent(total_timesteps=3500000, n_envs=6)
 
     # Test the trained agent
-    #print("\nTesting trained agent...")
-    #test_trained_agent("quadpole_ppo", n_episodes=10)
+    print("\nTesting trained agent...")
+    test_trained_agent("saved_models.zip", n_episodes=10)
 
     # Visualize performance
     print("\nVisualizing performance...")
-    visualize_performance("quadpole_ppo")
+    visualize_performance("saved_models.zip")
