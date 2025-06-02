@@ -194,7 +194,7 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_models"):
     # Setup callbacks
     wandb_callback = WandbCallback(
         gradient_save_freq=100,
-        model_save_path=f"models/{run.id}",
+        #model_save_path=f"models/{run.id}",
         verbose=2,
     )
 
@@ -223,6 +223,7 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_models"):
 
     # Save the final model
     model.save(save_path)
+    # TODO: Add model saving (currently blocked by GT computer admin privileges
     print(f"Training completed! Model saved to {save_path}")
 
     return model
@@ -338,11 +339,11 @@ def visualize_performance(model_path="quadpole_ppo"):
 if __name__ == "__main__":
     # Train the agent
     print("Training PPO agent on QuadPole2D environment...")
-    model = train_ppo_agent(total_timesteps=500000, n_envs=8)
+    model = train_ppo_agent(total_timesteps=1500000, n_envs=8)
 
     # Test the trained agent
-    print("\nTesting trained agent...")
-    test_trained_agent("quadpole_ppo", n_episodes=10)
+    #print("\nTesting trained agent...")
+    #test_trained_agent("quadpole_ppo", n_episodes=10)
 
     # Visualize performance
     print("\nVisualizing performance...")
