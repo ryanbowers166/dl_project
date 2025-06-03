@@ -415,12 +415,12 @@ def visualize_performance(model_path="quadpole_ppo"):
 if __name__ == "__main__":
     # Train the agent
     #print("Training PPO agent on QuadPole2D environment...")
-    #model = train_ppo_agent(total_timesteps=3500000, n_envs=6)
+    #model = train_ppo_agent(total_timesteps=7000000, n_envs=6)
 
     # Test the trained agent
     print("\nTesting trained agent...")
-    test_trained_agent("saved_models.zip", n_episodes=10)
+    test_trained_agent("saved_model.zip", n_episodes=10)
 
     # Visualize performance
-    print("\nVisualizing performance...")
-    visualize_performance("saved_models.zip")
+    #print("\nVisualizing performance...")
+    #visualize_performance("saved_models.zip")
