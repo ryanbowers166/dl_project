@@ -180,7 +180,7 @@ def train_ppo_agent(config):
         clip_range=config["clip_range"],
         ent_coef=config["ent_coef"],
         vf_coef=config["vf_coef"],
-        verbose=1,
+        verbose=2,
         tensorboard_log=f"./logs/runs/{run.id}",  # Use wandb run ID for tensorboard
     )
 

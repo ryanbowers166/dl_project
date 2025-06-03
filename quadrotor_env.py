@@ -8,6 +8,7 @@ class QuadPole2D():
             max_steps = 500,
             timestep = 0.02):
         
+        print('Environment init')
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
         self.mp = 0.5             # Payload mass                   (kg)

@@ -112,11 +112,10 @@ def objective(trial):
         clip_range=config['clip_range'],
         ent_coef=config['ent_coef'],
         vf_coef=config['vf_coef'],
-        verbose=0,
+        verbose=2,
         tensorboard_log=f"./logs/optuna/{run.id}"
     )
 
-    # Callbacks
     # Setup callbacks
     wandb_callback = WandbCallback(
         gradient_save_freq=100,
