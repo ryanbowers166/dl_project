@@ -135,7 +135,7 @@ class CustomMetricsCallback(BaseCallback):
 
         return True
 
-def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
+def train_ppo_agent(config):
     """
     Train a PPO agent on the QuadPole2D environment
 
@@ -146,26 +146,12 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
     """
 
     # Create vectorized environment for parallel training
-    env = make_vec_env(make_env, n_envs=n_envs)
+    env = make_vec_env(make_env, n_envs=config['n_envs'])
 
     # Create evaluation environment
     eval_env = make_env()
 
-    config = {
-        "total_timesteps": total_timesteps,
-        "n_envs": n_envs,
-        "learning_rate": 3e-4,
-        "n_steps": 2048,
-        "batch_size": 64,
-        "n_epochs": 10,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_range": 0.2,
-        "ent_coef": 0.01,
-        "vf_coef": 0.5,
-        "algorithm": "PPO",
-        "env_name": "QuadPole2D",
-    }
+
 
     run_name = generate_run_name(config)
 
@@ -192,7 +178,7 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
         ent_coef=config["ent_coef"],
         vf_coef=config["vf_coef"],
         verbose=1,
-        tensorboard_log=f"runs/{run.id}",  # Use wandb run ID for tensorboard
+        tensorboard_log=f"./logs/runs/{run.id}",  # Use wandb run ID for tensorboard
     )
 
     # Setup callbacks
@@ -204,8 +190,8 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=f"{save_path}_best",
-        log_path=f"{save_path}_logs",
+        best_model_save_path=f"./saved_models/best",
+        log_path=f"./logs",
         eval_freq=10000,  # Evaluate every 10k steps
         deterministic=True,
         render=False
@@ -220,15 +206,15 @@ def train_ppo_agent(total_timesteps=100000, n_envs=4, save_path="saved_model"):
 
     # Train the agent
     model.learn(
-        total_timesteps=total_timesteps,
+        total_timesteps=config['total_timesteps'],
         callback=[wandb_callback, eval_callback, custom_callback],
         progress_bar=True
     )
 
     # Save the final model
-    model.save(save_path)
+    model.save('./saved_models')
     # TODO: Add model saving (currently blocked by GT computer admin privileges
-    print(f"Training completed! Model saved to {save_path}")
+    print(f"Training completed! Model saved to ./saved_models")
 
     return model
 
@@ -413,13 +399,36 @@ def visualize_performance(model_path="quadpole_ppo"):
 
 
 if __name__ == "__main__":
-    # Train the agent
-    #print("Training PPO agent on QuadPole2D environment...")
-    #model = train_ppo_agent(total_timesteps=7000000, n_envs=6)
+
+    config = {
+        "total_timesteps": 2e6,
+        "n_envs": 6,
+        "learning_rate": 3e-4,
+        "n_steps": 2048,
+        "batch_size": 64,
+        "n_epochs": 10,
+        "gamma": 0.985,
+        "gae_lambda": 0.95,
+        "clip_range": 0.2,
+        "ent_coef": 0.01,
+        "vf_coef": 0.5,
+        "algorithm": "PPO",
+        "env_name": "QuadPole2D",
+    }
+
+    for ent_coef in [0.01, 0.015]:
+        for gamma in [0.985, 0.99]:
+            for learning_rate in [3e-4, 1e-4]:
+                config["gamma"] = gamma
+                config['ent_coef'] = ent_coef
+                config['learning_rate'] = learning_rate
+
+                print("Training PPO agent on QuadPole2D environment...")
+                model = train_ppo_agent(config)
 
     # Test the trained agent
-    print("\nTesting trained agent...")
-    test_trained_agent("saved_model.zip", n_episodes=10)
+    #print("\nTesting trained agent...")
+    #test_trained_agent("saved_model.zip", n_episodes=10)
 
     # Visualize performance
     #print("\nVisualizing performance...")
