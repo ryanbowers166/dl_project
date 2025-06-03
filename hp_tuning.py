@@ -5,6 +5,7 @@ import numpy as np
 import wandb
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from wandb.integration.sb3 import WandbCallback
 from training_pipeline import QuadPole2DWrapper
@@ -57,7 +58,7 @@ class CustomMetricsCallback(BaseCallback):
 
 
 def make_env():
-    return QuadPole2DWrapper()
+    return Monitor(QuadPole2DWrapper())
 
 
 def objective(trial):
@@ -98,6 +99,7 @@ def objective(trial):
     # Create environments
     env = make_vec_env(make_env, n_envs=config['n_envs'])
     eval_env = make_env()
+    eval_env = Monitor(eval_env)
 
     # Create model
     model = PPO(

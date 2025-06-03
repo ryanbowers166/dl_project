@@ -7,6 +7,7 @@ import pygame
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 import matplotlib.pyplot as plt
 import wandb
@@ -52,7 +53,7 @@ class QuadPole2DWrapper(gym.Env):
 
 def make_env():
     """Factory function to create environment instances"""
-    return QuadPole2DWrapper()
+    return Monitor(QuadPole2DWrapper())
 
 
 def generate_run_name(config):
