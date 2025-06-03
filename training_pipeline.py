@@ -211,6 +211,8 @@ def train_ppo_agent(config):
         progress_bar=True
     )
 
+    run.finish()
+
     # Save the final model
     model.save('./saved_models')
     # TODO: Add model saving (currently blocked by GT computer admin privileges
@@ -401,13 +403,13 @@ def visualize_performance(model_path="quadpole_ppo"):
 if __name__ == "__main__":
 
     config = {
-        "total_timesteps": 2e6,
+        "total_timesteps": 20e6,
         "n_envs": 6,
         "learning_rate": 3e-4,
         "n_steps": 2048,
         "batch_size": 64,
         "n_epochs": 10,
-        "gamma": 0.985,
+        "gamma": 0.99,
         "gae_lambda": 0.95,
         "clip_range": 0.2,
         "ent_coef": 0.01,
@@ -416,15 +418,17 @@ if __name__ == "__main__":
         "env_name": "QuadPole2D",
     }
 
-    for ent_coef in [0.01, 0.015]:
-        for gamma in [0.985, 0.99]:
-            for learning_rate in [3e-4, 1e-4]:
-                config["gamma"] = gamma
-                config['ent_coef'] = ent_coef
-                config['learning_rate'] = learning_rate
+    for ent_coef in [0.01]:
+        for learning_rate in [1e-4]:
+            for batch_size in [64]:
+                for vf_coef in [0.2,0.3,0.4]:
+                    config['vf_coef'] = vf_coef
+                    config["batch_size"] = batch_size
+                    config['ent_coef'] = ent_coef
+                    config['learning_rate'] = learning_rate
 
-                print("Training PPO agent on QuadPole2D environment...")
-                model = train_ppo_agent(config)
+                    print("Training PPO agent on QuadPole2D environment...")
+                    model = train_ppo_agent(config)
 
     # Test the trained agent
     #print("\nTesting trained agent...")
@@ -433,3 +437,10 @@ if __name__ == "__main__":
     # Visualize performance
     #print("\nVisualizing performance...")
     #visualize_performance("saved_models.zip")
+
+# Notes
+# Ent_coef 0.01 is better than 0.015
+# Gamma 0.99 > 0.985
+# BS 64 is good, 256 amd 512 are bad
+# LR: 3e-4 and 1e-4 are both good
+# Vf_coef: 0.5 seems too high - agent minimizes Vloss very quickly but not policy loss.
