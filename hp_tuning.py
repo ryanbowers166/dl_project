@@ -42,8 +42,7 @@ class CustomMetricsCallback(BaseCallback):
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
                 # Track time balanced (if info contains it)
-                if hasattr(self.eval_env, '_time_balanced'):
-                    time_balanced = self.eval_env._time_balanced
+                time_balanced = self.eval_env.env.total_time_balanced
 
             # Log custom metrics to wandb
             wandb.log({
@@ -91,6 +90,8 @@ def objective(trial):
         project='dl-project',
         name=f"{timestamp}_trial_{trial.number}",
         config=config,
+        sync_tensorboard=True,  # Add this
+        monitor_gym=True,  # Add this
         reinit=True
     )
 

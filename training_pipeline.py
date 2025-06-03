@@ -41,6 +41,10 @@ class QuadPole2DWrapper(gym.Env):
         """Render the environment (optional)"""
         pass  # Implement if needed for visualization
 
+    def _time_balanced(self):
+        """Expose the time_balanced metric from the underlying environment"""
+        return getattr(self.env, '_time_balanced', 0)
+
     def close(self):
         """Close the environment"""
         pass
@@ -121,8 +125,7 @@ class CustomMetricsCallback(BaseCallback):
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
                 # Track time balanced (if info contains it)
-                if hasattr(self.eval_env, '_time_balanced'):
-                    time_balanced = self.eval_env._time_balanced
+                time_balanced = self.eval_env.env.total_time_balanced
 
             # Log custom metrics to wandb
             wandb.log({
@@ -215,7 +218,6 @@ def train_ppo_agent(config):
 
     # Save the final model
     model.save('./saved_models')
-    # TODO: Add model saving (currently blocked by GT computer admin privileges
     print(f"Training completed! Model saved to ./saved_models")
 
     return model

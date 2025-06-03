@@ -83,6 +83,7 @@ class QuadPole2D():
         self._steps = 0
         self._time = 0
         self._time_balanced = 0
+        self.total_time_balanced = 0
 
         # Sample a random angle phi for the pendulum
         phi = np.random.uniform(-np.pi, np.pi)
@@ -342,6 +343,7 @@ class QuadPole2D():
             #print('BALANCED')
             reward += 100*self.timestep
             self._time_balanced += self.timestep
+            self.total_time_balanced += 1
         else:
             self._time_balanced = 0
 
