@@ -4,6 +4,7 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
 import pygame
+import json
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
@@ -149,26 +150,24 @@ def train_ppo_agent(config):
         save_path: Path to save the trained model
     """
 
-    # Create vectorized environment for parallel training
+    # Load config
+    run_name = generate_run_name(config)
+
+    # Create envs for training and eval
     env = make_vec_env(make_env, n_envs=config['n_envs'])
 
-    # Create evaluation environment
     eval_env = make_env()
-
-
-
-    run_name = generate_run_name(config)
 
     run = wandb.init(
         project='dl-project',
         name=run_name,
         config=config,
-        sync_tensorboard=True,  # Also sync tensorboard logs
-        monitor_gym=True,  # Automatically log gym environments
-        save_code=True,  # Save code for reproducibility
+        sync_tensorboard=True,
+        monitor_gym=True,
+        save_code=True,
     )
 
-    # Initialize PPO agent with reasonable hyperparameters
+
     model = PPO(
         "MlpPolicy",
         env,
@@ -184,6 +183,7 @@ def train_ppo_agent(config):
         verbose=2,
         tensorboard_log=f"./logs/runs/{run.id}",  # Use wandb run ID for tensorboard
     )
+
 
     # Setup callbacks
     wandb_callback = WandbCallback(
@@ -208,7 +208,6 @@ def train_ppo_agent(config):
 
     print("Starting training...")
 
-    # Train the agent
     model.learn(
         total_timesteps=config['total_timesteps'],
         callback=[wandb_callback, eval_callback, custom_callback],
@@ -405,33 +404,18 @@ def visualize_performance(model_path="quadpole_ppo"):
 
 if __name__ == "__main__":
 
-    config = {
-        "total_timesteps": 20e6,
-        "n_envs": 6,
-        "learning_rate": 3e-4,
-        "n_steps": 2048,
-        "batch_size": 64,
-        "n_epochs": 10,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_range": 0.2,
-        "ent_coef": 0.01,
-        "vf_coef": 0.5,
-        "algorithm": "PPO",
-        "env_name": "QuadPole2D",
-    }
+    config_filename = './configs/config_v1.json'
 
-    for ent_coef in [0.01]:
-        for learning_rate in [1e-4]:
-            for batch_size in [64]:
-                for vf_coef in [0.2,0.3,0.4]:
-                    config['vf_coef'] = vf_coef
-                    config["batch_size"] = batch_size
-                    config['ent_coef'] = ent_coef
-                    config['learning_rate'] = learning_rate
+    with open(config_filename, 'r') as file:
+        config = json.load(file)
 
-                    print("Training PPO agent on QuadPole2D environment...")
-                    model = train_ppo_agent(config)
+    config['config_filename'] = config_filename
+
+    for ent_coef in [0.01, 0.02, 0.015]:
+        config['ent_coef'] = ent_coef
+
+        print("Training PPO agent on QuadPole2D environment...")
+        model = train_ppo_agent(config_filename)
 
     # Test the trained agent
     #print("\nTesting trained agent...")
