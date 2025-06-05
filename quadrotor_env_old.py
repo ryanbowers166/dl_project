@@ -4,15 +4,11 @@ import gymnasium as gym
 class QuadPole2D():
     def __init__(
             self,
-            config,
             env_name = 'QuadPole2D',
             max_steps = 500,
             timestep = 0.02):
         
         print('Environment init')
-
-        self.config = config
-
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
         self.mp = 0.5             # Payload mass                   (kg)
@@ -48,12 +44,8 @@ class QuadPole2D():
         )
 
         self.action_space = gym.spaces.Box(
-            low=-1.0, high=1.0, shape=(2,), dtype=np.float32
+            low=0.0, high=20.0, shape=(2,), dtype=np.float32
         )
-
-        # self.action_space = gym.spaces.Box(
-        #     low=0.0, high=20.0, shape=(2,), dtype=np.float32
-        # )
 
     def _wrap_action(self, action):
         """
@@ -94,17 +86,12 @@ class QuadPole2D():
         self._time_balanced = 0
         self.total_time_balanced = 0
 
-        # Set initial pendulum position and angular velocity
-        if self.config['curriculum_level'] == 0:
-            phi_init = np.random.uniform(np.pi*0.95, np.pi*1.05)
-            phidot_init = 0
-        elif self.config['curriculum_level'] >= 1:
-            phi_init = np.random.uniform(-np.pi, np.pi)
-            phidot_init = np.random.uniform(-1,+1)
+        # Sample a random angle phi for the pendulum
+        phi = np.random.uniform(-np.pi, np.pi)
 
         # Set the initial state of the quadrotor and pendulum
         self.state_dict['quadrotor'] = np.array([0, 0, 0, 0, 0, 1, 0])
-        self.state_dict['pendulum'] = np.array([np.sin(phi_init), np.cos(phi_init), phidot_init])
+        self.state_dict['pendulum'] = np.array([np.sin(phi), np.cos(phi), 0])
 
         # Save the initial state for potential restarts
         self._initial_state = self.state_dict.copy()
@@ -265,21 +252,9 @@ class QuadPole2D():
         
         # Update sin and cos for theta using chain rule:
         # d/dt(s_theta) = c_theta * theta_dot, and d/dt(c_theta) = -s_theta * theta_dot.
-        #theta = np.arctan2(s_theta, c_theta)
-        #s_theta_new = np.sin(theta + theta_dot * dt)
-        #c_theta_new = np.cos(theta + theta_dot * dt)
-
-        # Direct update using rotation matrix approach
-        ds_theta = c_theta * theta_dot_new * dt
-        dc_theta = -s_theta * theta_dot_new * dt
-
-        s_theta_new = s_theta + ds_theta
-        c_theta_new = c_theta + dc_theta
-
-        # Renormalize to maintain unit circle constraint
-        norm = np.sqrt(s_theta_new ** 2 + c_theta_new ** 2)
-        s_theta_new /= norm
-        c_theta_new /= norm
+        theta = np.arctan2(s_theta, c_theta)
+        s_theta_new = np.sin(theta + theta_dot * dt)
+        c_theta_new = np.cos(theta + theta_dot * dt)
 
         # Update sin and cos for phi using chain rule:
         # d/dt(s_phi) = c_phi * phi_dot, and d/dt(c_phi) = -s_phi * phi_dot.
@@ -346,8 +321,6 @@ class QuadPole2D():
         state = self._get_obs()
         info = self._get_info()
 
-        self.state = state # Temp for logging
-
         # Compute cost terms
         #pos_cost = np.sum(np.abs(state[0:2])) + np.sum((state[0:2])**2)  # Position cost: L1 and L2 norms
         vel_cost = np.sum(state[2:4]**2)                                 # Velocity cost: L2 norm
@@ -363,20 +336,17 @@ class QuadPole2D():
             - 0.5*vel_cost,       
             - 5.0*theta_cost,    
             - 5*omega_cost,
-            - (25.0*phi_cost - 25.0)*(1/(1 + 5*phi_dot_cost)) # Balancing reward (TODO this might be an issue)
+            - (25.0*phi_cost - 25.0)*(1/(1 + 5*phi_dot_cost)) # Balancing reward
         ])
 
         # Apply a bonus reward if the quadrotor is balanced
-        if state[8] < -0.92 and abs(state[9]) < 0.2: # Removed: np.sum(state[0:2]**2)**0.5 < self.balance_radius
+        if state[8] < -0.95 and abs(state[9]) < 0.1: # Removed: np.sum(state[0:2]**2)**0.5 < self.balance_radius
             #print('BALANCED')
             reward += 100*self.timestep
             self._time_balanced += self.timestep
             self.total_time_balanced += 1
         else:
             self._time_balanced = 0
-
-        if self.total_time_balanced >= 300:
-            self.config['curriculum_level'] += 1
 
         # Increment the step count and simulation time
         self._steps += 1
@@ -390,7 +360,6 @@ class QuadPole2D():
         # Determine if the episode should be truncated
         truncated = self._steps >= self.max_steps or oob
         terminated = False
-
 
         return state, reward, terminated, truncated, info
 

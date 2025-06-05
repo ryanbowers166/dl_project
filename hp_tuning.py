@@ -58,30 +58,32 @@ class CustomMetricsCallback(BaseCallback):
         return True
 
 
-def make_env():
-    return Monitor(QuadPole2DWrapper())
+def make_env(config):
+    return Monitor(QuadPole2DWrapper(config))
 
 
 def objective(trial):
     # Suggest hyperparameters
-    vf_coef = trial.suggest_float('vf_coef', 0.2, 0.5)
-    batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
-    n_steps = trial.suggest_categorical('n_steps', [1024, 2048, 4096])
-    n_epochs = trial.suggest_int('n_epochs', 5, 20)
-    gae_lambda = trial.suggest_float('gae_lambda', 0.9, 0.99)
+    #vf_coef = trial.suggest_float('vf_coef', 0.2, 0.5)
+    batch_size = trial.suggest_categorical('batch_size', [64, 128])
+    learning_rate = trial.suggest_categorical('learning_rate', [0.001, 0.0001, 0.0005, 0.00005])
+    #n_steps = trial.suggest_categorical('n_steps', [1024, 2048, 4096])
+    #n_epochs = trial.suggest_int('n_epochs', 5, 20)
+    #gae_lambda = trial.suggest_float('gae_lambda', 0.9, 0.99)
 
     # Fixed hyperparameters
     config = {
         'n_envs': 6,
-        'learning_rate': 1e-4,
+        'learning_rate': learning_rate,
         'gamma': 0.99,
         'clip_range': 0.2,
         'ent_coef': 0.01,
-        'vf_coef': vf_coef,
+        'vf_coef': 0.45,
         'batch_size': batch_size,
-        'n_steps': n_steps,
-        'n_epochs': n_epochs,
-        'gae_lambda': gae_lambda
+        'n_steps': 2048,
+        'n_epochs': 10,
+        'gae_lambda': 0.95,
+        "curriculum_level": 0
     }
 
     now = datetime.now()
@@ -98,8 +100,8 @@ def objective(trial):
     )
 
     # Create environments
-    env = make_vec_env(make_env, n_envs=config['n_envs'])
-    eval_env = make_env()
+    env = make_vec_env(lambda: make_env(config), n_envs=config['n_envs'])
+    eval_env = make_env(config)
     eval_env = Monitor(eval_env)
 
     # Create model

@@ -19,9 +19,9 @@ from quadrotor_env import QuadPole2D
 class QuadPole2DWrapper(gym.Env):
     """Gymnasium wrapper for QuadPole2D environment"""
 
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
-        self.env = QuadPole2D()
+        self.env = QuadPole2D(config)
 
         # Use the observation and action spaces from the original environment
         self.observation_space = self.env.observation_space
