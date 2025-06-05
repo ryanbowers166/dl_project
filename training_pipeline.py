@@ -126,7 +126,7 @@ class CustomMetricsCallback(BaseCallback):
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
                 # Track time balanced (if info contains it)
-                time_balanced = self.eval_env.env.total_time_balanced
+                time_balanced = self.eval_env.env.env.env.total_time_balanced
 
             # Log custom metrics to wandb
             wandb.log({

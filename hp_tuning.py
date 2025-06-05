@@ -9,6 +9,7 @@ from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
 from wandb.integration.sb3 import WandbCallback
 from training_pipeline import QuadPole2DWrapper
+import sklearn
 
 
 class CustomMetricsCallback(BaseCallback):
@@ -43,7 +44,7 @@ class CustomMetricsCallback(BaseCallback):
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
                 # Track time balanced (if info contains it)
-                time_balanced = self.eval_env.env.total_time_balanced
+                time_balanced = self.eval_env.env.env.env.total_time_balanced
 
             # Log custom metrics to wandb
             wandb.log({
