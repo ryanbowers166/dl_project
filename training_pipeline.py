@@ -20,9 +20,9 @@ from quadrotor_env import QuadPole2D
 class QuadPole2DWrapper(gym.Env):
     """Gymnasium wrapper for QuadPole2D environment"""
 
-    def __init__(self, config):
+    def __init__(self, config, mode):
         super().__init__()
-        self.env = QuadPole2D(config)
+        self.env = QuadPole2D(config, mode)
 
         # Use the observation and action spaces from the original environment
         self.observation_space = self.env.observation_space
@@ -224,7 +224,7 @@ def train_ppo_agent(config):
     return model
 
 
-def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
+def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5):
     """
     Test a trained agent
 
@@ -232,6 +232,8 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
         model_path: Path to the saved model
         n_episodes: Number of episodes to test
     """
+
+    config['curriculum_level'] = 2
 
     # Initialize pygame
     pygame.init()
@@ -246,7 +248,7 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
     model = PPO.load(model_path)
 
     # Create test environment
-    env = QuadPole2DWrapper()
+    env = QuadPole2DWrapper(config, mode)
 
     episode_rewards = []
     episode_lengths = []
@@ -339,13 +341,13 @@ def test_trained_agent(model_path="quadpole_ppo", n_episodes=5):
     return episode_rewards, episode_lengths
 
 
-def visualize_performance(model_path="quadpole_ppo"):
+def visualize_performance(config, model_path="quadpole_ppo"):
     """
     Visualize the trained agent's performance
     """
     # Load the trained model
     model = PPO.load(model_path)
-    env = QuadPole2DWrapper()
+    env = QuadPole2DWrapper(config)
 
     # Run one episode and collect trajectory
     obs, info = env.reset()
@@ -413,16 +415,16 @@ if __name__ == "__main__":
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
 
-    for ent_coef in [0.01, 0.02, 0.015]:
-        config['ent_coef'] = ent_coef
+    #for ent_coef in [0.01, 0.02, 0.015]:
+        #config['ent_coef'] = ent_coef
 
-        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-        model = train_ppo_agent(config)
+    #print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+    #model = train_ppo_agent(config)
 
     # Test the trained agent
-    #print("\nTesting trained agent...")
-    #test_trained_agent("saved_model.zip", n_episodes=10)
+    print("\nTesting trained agent...")
+    test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10)
 
     # Visualize performance
     #print("\nVisualizing performance...")
-    #visualize_performance("saved_models.zip")
+    #visualize_performance(config, model_path="saved_models.zip")

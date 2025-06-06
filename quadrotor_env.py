@@ -5,6 +5,7 @@ class QuadPole2D():
     def __init__(
             self,
             config,
+            mode,
             env_name = 'QuadPole2D',
             max_steps = 500,
             timestep = 0.02):
@@ -12,8 +13,10 @@ class QuadPole2D():
         print('Environment init')
 
         self.config = config
+        self.mode = mode
         self.episode_count = 0 # Increments 1 per reset()
         self.balance_history = [] # Will store self.total_time_balanced for each episode. Used to decide when to move up in the curriculum
+
 
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
@@ -99,12 +102,26 @@ class QuadPole2D():
         self.episode_count += 1
 
         # Set initial pendulum position and angular velocity
-        if self.config['curriculum_level'] == 0:
+
+        if self.mode == 'test':
+            phi_init = np.random.uniform(-np.pi, np.pi)
+            phidot_init = np.random.uniform(-12, +12)
+
+        elif self.config['curriculum_level'] == 0:
             phi_init = np.random.uniform(np.pi*0.95, np.pi*1.05)
             phidot_init = 0
-        elif self.config['curriculum_level'] >= 1:
+        elif self.config['curriculum_level'] == 1:
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-1,+1)
+
+        elif self.config['curriculum_level'] == 2:
+            phi_init = np.random.uniform(-np.pi, np.pi)
+            phidot_init = np.random.uniform(-2,+2)
+
+        elif self.config['curriculum_level'] == 2:
+            phi_init = np.random.uniform(-np.pi, np.pi)
+            phidot_init = np.random.uniform(-4,+4)
+
 
         # Set the initial state of the quadrotor and pendulum
         self.state_dict['quadrotor'] = np.array([0, 0, 0, 0, 0, 1, 0])
@@ -379,7 +396,7 @@ class QuadPole2D():
         else:
             self._time_balanced = 0
 
-        if self.total_time_balanced >= 300:
+        if self.total_time_balanced >= 300 and self.mode == 'train':
             self.config['curriculum_level'] += 1
             print(f'Curriculum level {self.config['curriculum_level']}')
 
