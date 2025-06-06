@@ -6,6 +6,7 @@ class QuadPole2D():
             self,
             config,
             mode,
+            manual_goal_position=None,
             env_name = 'QuadPole2D',
             max_steps = 500,
             timestep = 0.02):
@@ -17,6 +18,8 @@ class QuadPole2D():
         self.episode_count = 0 # Increments 1 per reset()
         self.balance_history = [] # Will store self.total_time_balanced for each episode. Used to decide when to move up in the curriculum
 
+        self.goal_position = np.array([0.0, 0.0]) # Will be set during reset
+        self.manual_goal_position = manual_goal_position
 
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
@@ -47,18 +50,18 @@ class QuadPole2D():
             'pendulum': np.zeros(4)
         }
 
-        # OpenAI Gym API attributes (not really used here)
+        # OpenAI Gym API attributes
         self.observation_space = gym.spaces.Box(
-            low=-np.inf, high=np.inf, shape=(10,), dtype=np.float32
+            low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
         )
+
+        # self.observation_space = gym.spaces.Box(
+        #     low=-np.inf, high=np.inf, shape=(10,), dtype=np.float32
+        # )
 
         self.action_space = gym.spaces.Box(
             low=-1.0, high=1.0, shape=(2,), dtype=np.float32
         )
-
-        # self.action_space = gym.spaces.Box(
-        #     low=0.0, high=20.0, shape=(2,), dtype=np.float32
-        # )
 
     def _wrap_action(self, action):
         """
@@ -101,8 +104,18 @@ class QuadPole2D():
 
         self.episode_count += 1
 
-        # Set initial pendulum position and angular velocity
+        # Randomly set goal position to either (0,0) or (5,5)
+        if self.manual_goal_position is not None:
+            self.goal_position = self.manual_goal_position
+        else:
+            if np.random.random() < 0.5:
+                self.goal_position = np.array([0.0, 0.0])
+            else:
+                self.goal_position = np.array([1.0, 1.0])
 
+        print(f'Setting goal position to {self.goal_position}')
+
+        # Set initial pendulum position and angular velocity
         if self.mode == 'test':
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-4, +4)
@@ -118,7 +131,7 @@ class QuadPole2D():
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-2,+2)
 
-        elif self.config['curriculum_level'] == 2:
+        elif self.config['curriculum_level'] >= 2:
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-4,+4)
 
@@ -166,7 +179,8 @@ class QuadPole2D():
             The function assumes that self.state_dict contains valid 'quadrotor' and 'pendulum'
             keys, each associated with a numpy array representing the respective state.
         """
-        return np.hstack((self.state_dict['quadrotor'], self.state_dict['pendulum']))
+        #return np.hstack((self.state_dict['quadrotor'], self.state_dict['pendulum']))
+        return np.hstack((self.state_dict['quadrotor'], self.state_dict['pendulum'], self.goal_position))
     
     def _get_info(self):
         """
@@ -371,6 +385,7 @@ class QuadPole2D():
 
         # Compute cost terms
         #pos_cost = np.sum(np.abs(state[0:2])) + np.sum((state[0:2])**2)  # Position cost: L1 and L2 norms
+        pos_cost = np.sum(np.abs(state[0:2] - self.goal_position)) + np.sum((state[0:2] - self.goal_position) ** 2)  # Position cost relative to goal: L1 and L2 norms
         vel_cost = np.sum(state[2:4]**2)                                 # Velocity cost: L2 norm
         theta_cost = 1 - np.abs(state[5])                                # Quadrotor orientation cost (cosine of theta): 1 - cos(theta)
         omega_cost = state[6]**2                                         # Quadrotor angular velocity cost: L2 norm
@@ -380,7 +395,7 @@ class QuadPole2D():
         # Compute the reward using the timestep-scaled cost terms
         reward = 0
         reward += self.timestep * np.sum([
-            #- 15.0*pos_cost,
+            - 15.0*pos_cost,
             - 0.5*vel_cost,       
             - 5.0*theta_cost,    
             - 5*omega_cost,

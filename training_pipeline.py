@@ -161,13 +161,12 @@ def train_ppo_agent(config,mode):
 
     run = wandb.init(
         project='dl-project',
-        name=run_name,
+        name='gcrl_'+run_name,
         config=config,
         sync_tensorboard=True,
         monitor_gym=True,
         save_code=True,
     )
-
 
     model = PPO(
         "MlpPolicy",
