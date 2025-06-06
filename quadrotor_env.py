@@ -105,7 +105,7 @@ class QuadPole2D():
 
         if self.mode == 'test':
             phi_init = np.random.uniform(-np.pi, np.pi)
-            phidot_init = np.random.uniform(-12, +12)
+            phidot_init = np.random.uniform(-4, +4)
 
         elif self.config['curriculum_level'] == 0:
             phi_init = np.random.uniform(np.pi*0.95, np.pi*1.05)

@@ -53,9 +53,9 @@ class QuadPole2DWrapper(gym.Env):
         pass
 
 
-def make_env():
+def make_env(config, mode):
     """Factory function to create environment instances"""
-    return Monitor(QuadPole2DWrapper(config))
+    return Monitor(QuadPole2DWrapper(config, mode))
 
 
 def generate_run_name(config):
@@ -141,7 +141,7 @@ class CustomMetricsCallback(BaseCallback):
 
         return True
 
-def train_ppo_agent(config):
+def train_ppo_agent(config,mode):
     """
     Train a PPO agent on the QuadPole2D environment
 
@@ -155,9 +155,9 @@ def train_ppo_agent(config):
     run_name = generate_run_name(config)
 
     # Create envs for training and eval
-    env = make_vec_env(make_env, n_envs=config['n_envs'])
+    env = make_vec_env(lambda: make_env(config,mode), n_envs=config['n_envs'])
 
-    eval_env = make_env()
+    eval_env = make_env(config,"eval")
 
     run = wandb.init(
         project='dl-project',
@@ -418,12 +418,14 @@ if __name__ == "__main__":
     #for ent_coef in [0.01, 0.02, 0.015]:
         #config['ent_coef'] = ent_coef
 
-    #print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    #model = train_ppo_agent(config)
+    for batch_size in [512, 256, 128]:
+        config['batch_size'] = batch_size
+        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+        model = train_ppo_agent(config,"train")
 
     # Test the trained agent
-    print("\nTesting trained agent...")
-    test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10)
+    #print("\nTesting trained agent...")
+    #test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10)
 
     # Visualize performance
     #print("\nVisualizing performance...")
