@@ -106,14 +106,14 @@ class QuadPole2D():
 
         # Randomly set goal position to either (0,0) or (5,5)
         if self.manual_goal_position is not None:
-            self.goal_position = self.manual_goal_position
+            self.goal_position = np.array(self.manual_goal_position)
         else:
             if np.random.random() < 0.5:
                 self.goal_position = np.array([0.0, 0.0])
             else:
                 self.goal_position = np.array([1.0, 1.0])
 
-        print(f'Setting goal position to {self.goal_position}')
+        #print(f'Setting goal position to {self.goal_position}')
 
         # Set initial pendulum position and angular velocity
         if self.mode == 'test':
@@ -461,7 +461,7 @@ class QuadPole2D():
             state = observation
 
         # Unpack the state vector
-        x, z, vx, vz, s_theta, c_theta, theta_dot, s_phi, c_phi, phi_dot = state
+        x, z, vx, vz, s_theta, c_theta, theta_dot, s_phi, c_phi, phi_dot, goal_x, goal_y = state
         pos = np.array([x, z])
 
         ax.axhline(0, color=(0, 0, 0, 0.3), lw=1, linestyle='--')
@@ -473,6 +473,9 @@ class QuadPole2D():
         circle_x = radius * np.cos(theta)
         circle_y = radius * np.sin(theta)
         ax.plot(circle_x, circle_y, color=(0, 0, 0, 0.3), lw=1, linestyle='--')
+
+        # Render goal position
+        ax.scatter(goal_x, goal_y, color='red', marker='x', s=100, zorder=4, alpha=alpha, linewidths=3)
         
         # --- Quadrotor Rendering ---
         # Draw the quadrotor body as a scatter point.

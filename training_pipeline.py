@@ -20,9 +20,9 @@ from quadrotor_env import QuadPole2D
 class QuadPole2DWrapper(gym.Env):
     """Gymnasium wrapper for QuadPole2D environment"""
 
-    def __init__(self, config, mode):
+    def __init__(self, config, mode, manual_goal_position):
         super().__init__()
-        self.env = QuadPole2D(config, mode)
+        self.env = QuadPole2D(config, mode, manual_goal_position)
 
         # Use the observation and action spaces from the original environment
         self.observation_space = self.env.observation_space
@@ -53,9 +53,9 @@ class QuadPole2DWrapper(gym.Env):
         pass
 
 
-def make_env(config, mode):
+def make_env(config, mode, manual_goal_position=None):
     """Factory function to create environment instances"""
-    return Monitor(QuadPole2DWrapper(config, mode))
+    return Monitor(QuadPole2DWrapper(config, mode, manual_goal_position))
 
 
 def generate_run_name(config):
@@ -141,7 +141,7 @@ class CustomMetricsCallback(BaseCallback):
 
         return True
 
-def train_ppo_agent(config,mode):
+def train_ppo_agent(config,mode, manual_goal_position=None):
     """
     Train a PPO agent on the QuadPole2D environment
 
@@ -155,9 +155,9 @@ def train_ppo_agent(config,mode):
     run_name = generate_run_name(config)
 
     # Create envs for training and eval
-    env = make_vec_env(lambda: make_env(config,mode), n_envs=config['n_envs'])
+    env = make_vec_env(lambda: make_env(config,mode, manual_goal_position), n_envs=config['n_envs'])
 
-    eval_env = make_env(config,"eval")
+    eval_env = make_env(config,"eval", manual_goal_position)
 
     run = wandb.init(
         project='dl-project',
@@ -223,7 +223,7 @@ def train_ppo_agent(config,mode):
     return model
 
 
-def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5):
+def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
     """
     Test a trained agent
 
@@ -247,7 +247,7 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5):
     model = PPO.load(model_path)
 
     # Create test environment
-    env = QuadPole2DWrapper(config, mode)
+    env = QuadPole2DWrapper(config, mode, manual_goal_position)
 
     episode_rewards = []
     episode_lengths = []
@@ -414,17 +414,15 @@ if __name__ == "__main__":
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
 
-    #for ent_coef in [0.01, 0.02, 0.015]:
-        #config['ent_coef'] = ent_coef
+    #for batch_size in [512, 256, 128]:
+        #config['batch_size'] = batch_size
 
-    for batch_size in [512, 256, 128]:
-        config['batch_size'] = batch_size
-        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-        model = train_ppo_agent(config,"train")
+    print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+    model = train_ppo_agent(config,"train")
 
     # Test the trained agent
     #print("\nTesting trained agent...")
-    #test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10)
+    #test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10, manual_goal_position=(1.0,1.0))
 
     # Visualize performance
     #print("\nVisualizing performance...")
