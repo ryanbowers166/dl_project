@@ -21,6 +21,8 @@ class QuadPole2D():
         self.goal_position = np.array([0.0, 0.0]) # Will be set during reset
         self.manual_goal_position = manual_goal_position
 
+        self.max_curriculum_level = 4
+
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
         self.mp = 0.5             # Payload mass                   (kg)
@@ -131,9 +133,13 @@ class QuadPole2D():
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-2,+2)
 
-        elif self.config['curriculum_level'] >= 2:
+        elif self.config['curriculum_level'] == 3:
             phi_init = np.random.uniform(-np.pi, np.pi)
             phidot_init = np.random.uniform(-4,+4)
+
+        elif self.config['curriculum_level'] == 4:
+            phi_init = np.random.uniform(-np.pi, np.pi)
+            phidot_init = np.random.uniform(-6, +6)
 
 
         # Set the initial state of the quadrotor and pendulum
@@ -411,7 +417,7 @@ class QuadPole2D():
         else:
             self._time_balanced = 0
 
-        if self.total_time_balanced >= 300 and self.mode == 'train':
+        if self.config['curriculum_level'] < self.max_curriculum_level and self.total_time_balanced >= 300 and self.mode == 'train':
             self.config['curriculum_level'] += 1
             print(f'Curriculum level {self.config['curriculum_level']}')
 
