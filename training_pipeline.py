@@ -1,3 +1,4 @@
+import multiprocessing
 from datetime import datetime
 import numpy as np
 import gymnasium as gym
@@ -54,7 +55,7 @@ class QuadPole2DWrapper(gym.Env):
 
 def make_env():
     """Factory function to create environment instances"""
-    return Monitor(QuadPole2DWrapper())
+    return Monitor(QuadPole2DWrapper(config))
 
 
 def generate_run_name(config):
@@ -127,7 +128,7 @@ class CustomMetricsCallback(BaseCallback):
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
                 # Track time balanced (if info contains it)
-                time_balanced = self.eval_env.env.env.env.total_time_balanced
+                time_balanced = self.eval_env.env.env.total_time_balanced
 
             # Log custom metrics to wandb
             wandb.log({
@@ -404,18 +405,19 @@ def visualize_performance(model_path="quadpole_ppo"):
 
 if __name__ == "__main__":
 
-    config_filename = './configs/config_v1.json'
+    config_filename = './configs/config_v3.json'
 
     with open(config_filename, 'r') as file:
         config = json.load(file)
 
     config['config_filename'] = config_filename
+    config['n_envs'] = multiprocessing.cpu_count()
 
     for ent_coef in [0.01, 0.02, 0.015]:
         config['ent_coef'] = ent_coef
 
-        print("Training PPO agent on QuadPole2D environment...")
-        model = train_ppo_agent(config_filename)
+        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+        model = train_ppo_agent(config)
 
     # Test the trained agent
     #print("\nTesting trained agent...")
@@ -424,10 +426,3 @@ if __name__ == "__main__":
     # Visualize performance
     #print("\nVisualizing performance...")
     #visualize_performance("saved_models.zip")
-
-# Notes
-# Ent_coef 0.01 is better than 0.015
-# Gamma 0.99 > 0.985
-# BS 64 is good, 256 amd 512 are bad
-# LR: 3e-4 and 1e-4 are both good
-# Vf_coef: 0.5 seems too high - agent minimizes Vloss very quickly but not policy loss.

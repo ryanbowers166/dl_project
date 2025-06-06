@@ -65,26 +65,28 @@ def make_env(config):
 def objective(trial):
     # Suggest hyperparameters
     #vf_coef = trial.suggest_float('vf_coef', 0.2, 0.5)
-    batch_size = trial.suggest_categorical('batch_size', [64, 128])
+    batch_size = trial.suggest_categorical('batch_size', [64, 128, 256])
     learning_rate = trial.suggest_categorical('learning_rate', [0.001, 0.0001, 0.0005, 0.00005])
+    n_epochs = trial.suggest_categorical('n_epochs', [10, 20, 25])
     #n_steps = trial.suggest_categorical('n_steps', [1024, 2048, 4096])
     #n_epochs = trial.suggest_int('n_epochs', 5, 20)
     #gae_lambda = trial.suggest_float('gae_lambda', 0.9, 0.99)
 
     # Fixed hyperparameters
     config = {
-        'n_envs': 6,
-        'learning_rate': learning_rate,
-        'gamma': 0.99,
-        'clip_range': 0.2,
-        'ent_coef': 0.01,
-        'vf_coef': 0.45,
-        'batch_size': batch_size,
-        'n_steps': 2048,
-        'n_epochs': 10,
-        'gae_lambda': 0.95,
-        "curriculum_level": 0
-    }
+          "n_envs": 6,
+          "total_timesteps": 20e6,
+          "learning_rate": learning_rate,
+          "n_steps": 2048,
+          "batch_size": batch_size,
+          "n_epochs": n_epochs,
+          "gamma": 0.99,
+          "gae_lambda": 0.95,
+          "clip_range": 0.2,
+          "ent_coef": 0.01,
+          "vf_coef": 0.45,
+          "curriculum_level": 0
+        }
 
     now = datetime.now()
     timestamp = now.strftime("%m%d_%H%M")

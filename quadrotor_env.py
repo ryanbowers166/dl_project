@@ -12,6 +12,8 @@ class QuadPole2D():
         print('Environment init')
 
         self.config = config
+        self.episode_count = 0 # Increments 1 per reset()
+        self.balance_history = [] # Will store self.total_time_balanced for each episode. Used to decide when to move up in the curriculum
 
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
@@ -93,6 +95,8 @@ class QuadPole2D():
         self._time = 0
         self._time_balanced = 0
         self.total_time_balanced = 0
+
+        self.episode_count += 1
 
         # Set initial pendulum position and angular velocity
         if self.config['curriculum_level'] == 0:
@@ -377,6 +381,7 @@ class QuadPole2D():
 
         if self.total_time_balanced >= 300:
             self.config['curriculum_level'] += 1
+            print(f'Curriculum level {self.config['curriculum_level']}')
 
         # Increment the step count and simulation time
         self._steps += 1
