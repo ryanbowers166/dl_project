@@ -144,7 +144,6 @@ class CustomMetricsCallback(BaseCallback):
 def train_ppo_agent(config,mode, manual_goal_position=None):
     """
     Train a PPO agent on the QuadPole2D environment
-
     Args:
         total_timesteps: Total number of training timesteps
         n_envs: Number of parallel environments
@@ -156,7 +155,6 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
 
     # Create envs for training and eval
     env = make_vec_env(lambda: make_env(config,mode, manual_goal_position), n_envs=config['n_envs'])
-
     eval_env = make_env(config,"eval", manual_goal_position)
 
     run = wandb.init(
@@ -184,30 +182,23 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
         tensorboard_log=f"./logs/runs/{run.id}",  # Use wandb run ID for tensorboard
     )
 
-
-    # Setup callbacks
-    wandb_callback = WandbCallback(
-        gradient_save_freq=100,
-        #model_save_path=f"models/{run.id}",
-        verbose=2,
-    )
-
+    ################################ Setup callbacks ################################
+    wandb_callback = WandbCallback(gradient_save_freq=100, verbose=2,)
     eval_callback = EvalCallback(
         eval_env,
         best_model_save_path=f"./saved_models/best",
         log_path=f"./logs",
         eval_freq=10000,  # Evaluate every 10k steps
-        deterministic=True,
-        render=False
+        deterministic=True, render=False
     )
-
     custom_callback = CustomMetricsCallback(
         eval_env=eval_env,
         log_freq=5000,  # Log custom metrics every 5k steps
     )
 
-    print("Starting training...")
 
+    ################################ Start training ################################
+    print("Starting training...")
     model.learn(
         total_timesteps=config['total_timesteps'],
         callback=[wandb_callback, eval_callback, custom_callback],
@@ -406,7 +397,7 @@ def visualize_performance(config, model_path="quadpole_ppo"):
 
 if __name__ == "__main__":
 
-    config_filename = './configs/config_v3.json'
+    config_filename = './configs/config_v4.json'
 
     with open(config_filename, 'r') as file:
         config = json.load(file)
@@ -414,15 +405,15 @@ if __name__ == "__main__":
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
 
-    #for batch_size in [512, 256, 128]:
-        #config['batch_size'] = batch_size
+    for pos_cost_multiplier in [15, 20, 25, 30]:
+        config['pos_cost_multiplier'] = pos_cost_multiplier
 
-    print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    model = train_ppo_agent(config,"train")
+        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+        model = train_ppo_agent(config,"train")
 
     # Test the trained agent
     #print("\nTesting trained agent...")
-    #test_trained_agent(config, "test", model_path="./saved_models/best/best_model.zip", n_episodes=10, manual_goal_position=(1.0,1.0))
+    #test_trained_agent(config, "test", model_path="trainedmodel_twogoals.zip", n_episodes=10, manual_goal_position=(0.0,0.0))
 
     # Visualize performance
     #print("\nVisualizing performance...")

@@ -21,7 +21,7 @@ class QuadPole2D():
         self.goal_position = np.array([0.0, 0.0]) # Will be set during reset
         self.manual_goal_position = manual_goal_position
 
-        self.max_curriculum_level = 4
+        self.max_curriculum_level = 7
 
         # Quadrotor parameters
         self.mq = 1.5             # Quadrotor mass                 (kg)
@@ -106,16 +106,29 @@ class QuadPole2D():
 
         self.episode_count += 1
 
-        # Randomly set goal position to either (0,0) or (5,5)
-        if self.manual_goal_position is not None:
+        # Set goal position
+        if isinstance(self.manual_goal_position, (np.ndarray, list, tuple)):
             self.goal_position = np.array(self.manual_goal_position)
-        else:
-            if np.random.random() < 0.5:
-                self.goal_position = np.array([0.0, 0.0])
-            else:
-                self.goal_position = np.array([1.0, 1.0])
 
-        #print(f'Setting goal position to {self.goal_position}')
+        elif self.manual_goal_position == 'dynamic-1': # Dynamically change goal position later in the episode (handled in env.step)
+            self.goal_position = np.array([1.0, 1.0])
+
+        else:
+            if self.config['curriculum_level'] <= 4: # Below CL 4, goal can be one of two locations
+                if np.random.random() < 0.5: self.goal_position = np.array([0.0, 0.0])
+                else: self.goal_position = np.array([1.0, 1.0])
+
+            elif self.config['curriculum_level'] == 5: # At CL 5, goal can be one of 5 locations
+                rng = np.random.random()
+                if rng < 0.20: self.goal_position = np.array([0.0, 0.0])
+                elif 0.20 <= rng < 0.40: self.goal_position = np.array([1.0, 1.0])
+                elif 0.40 <= rng < 0.60:self.goal_position = np.array([-1.0, -1.0])
+                elif 0.60 <= rng < 0.80:self.goal_position = np.array([1.0, -1.0])
+                elif 0.80 <= rng:self.goal_position = np.array([-1.0, 1.0])
+
+
+            elif self.config['curriculum_level'] >= 6: # Above CL 6, goal can be anywhere on the map
+                self.goal_position = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)])
 
         # Set initial pendulum position and angular velocity
         if self.mode == 'test':
@@ -376,6 +389,13 @@ class QuadPole2D():
             maintain desired states, penalizing deviations and rewarding balance. The heavy out-of-bounds
             penalty enforces safe operation within the defined limits.
         """
+
+        if self.manual_goal_position == 'dynamic-1':
+            if self._steps <= 250:
+                self.goal_position = np.array([1.0, 1.0])
+            else:
+                self.goal_position = np.array([0.0, 0.0])
+                print('GOAL POSITION CHANGED')
         
         # Wrap the action
         action = self._wrap_action(action)
@@ -401,7 +421,7 @@ class QuadPole2D():
         # Compute the reward using the timestep-scaled cost terms
         reward = 0
         reward += self.timestep * np.sum([
-            - 15.0*pos_cost,
+            - self.config['pos_cost_multiplier']*pos_cost,
             - 0.5*vel_cost,       
             - 5.0*theta_cost,    
             - 5*omega_cost,
