@@ -226,7 +226,11 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, ma
     config['curriculum_level'] = 2
 
     # Initialize pygame
-    pygame.init()
+    #pygame.init()
+    pygame.display.init()
+    pygame.mixer.pre_init()#frequency=44100, size=-16, channels=2, buffersize=512, allowedchanges=pygame.AUDIO_ALLOW_ANY_CHANGE)
+    pygame.mixer.init()
+    pygame.joystick.init()
 
     # Set up display
     width, height = 800, 600
