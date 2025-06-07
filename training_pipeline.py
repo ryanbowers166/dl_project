@@ -159,7 +159,7 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
 
     run = wandb.init(
         project='dl-project',
-        name='gcrl_'+run_name,
+        name='gcrl_poscost'+str(config['pos_cost_multiplier'])+run_name,
         config=config,
         sync_tensorboard=True,
         monitor_gym=True,
@@ -208,7 +208,7 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
     run.finish()
 
     # Save the final model
-    model.save('./saved_models')
+    model.save(f'./saved_models/{run_name}')
     print(f"Training completed! Model saved to ./saved_models")
 
     return model
@@ -230,7 +230,7 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, ma
     pygame.display.init()
     pygame.mixer.pre_init()#frequency=44100, size=-16, channels=2, buffersize=512, allowedchanges=pygame.AUDIO_ALLOW_ANY_CHANGE)
     pygame.mixer.init()
-    pygame.joystick.init()
+    #pygame.joystick.init()
 
     # Set up display
     width, height = 800, 600
@@ -409,15 +409,15 @@ if __name__ == "__main__":
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
 
-    for pos_cost_multiplier in [15, 20, 25, 30]:
-        config['pos_cost_multiplier'] = pos_cost_multiplier
-
-        print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-        model = train_ppo_agent(config,"train")
+    # for pos_cost_multiplier in [15, 20, 25]:
+    #     config['pos_cost_multiplier'] = pos_cost_multiplier
+    #
+    #     print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+    #     model = train_ppo_agent(config,"train")
 
     # Test the trained agent
-    #print("\nTesting trained agent...")
-    #test_trained_agent(config, "test", model_path="trainedmodel_twogoals.zip", n_episodes=10, manual_goal_position=(0.0,0.0))
+    print("\nTesting trained agent...")
+    test_trained_agent(config, "test", model_path="./saved_models/0607_0331_PPO_QuadPole2D_lr5e04_env6_7.0M", n_episodes=10, manual_goal_position="dynamic-1")
 
     # Visualize performance
     #print("\nVisualizing performance...")
