@@ -118,7 +118,7 @@ class QuadPole2D():
                 if np.random.random() < 0.5: self.goal_position = np.array([0.0, 0.0])
                 else: self.goal_position = np.array([1.0, 1.0])
 
-            elif self.config['curriculum_level'] == 5: # At CL 5, goal can be one of 5 locations
+            elif self.config['curriculum_level'] >= 5: # At CL 5, goal can be one of 5 locations
                 rng = np.random.random()
                 if rng < 0.20: self.goal_position = np.array([0.0, 0.0])
                 elif 0.20 <= rng < 0.40: self.goal_position = np.array([1.0, 1.0])
@@ -127,8 +127,8 @@ class QuadPole2D():
                 elif 0.80 <= rng:self.goal_position = np.array([-1.0, 1.0])
 
 
-            elif self.config['curriculum_level'] >= 6: # Above CL 6, goal can be anywhere on the map
-                self.goal_position = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)])
+            #elif self.config['curriculum_level'] >= 6: # Above CL 6, goal can be anywhere on the map
+                #self.goal_position = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)])
 
         # Set initial pendulum position and angular velocity
         if self.mode == 'test':
@@ -437,7 +437,7 @@ class QuadPole2D():
         else:
             self._time_balanced = 0
 
-        if self.config['curriculum_level'] < self.max_curriculum_level and self.total_time_balanced >= 300 and self.mode == 'train':
+        if self.config['curriculum_level'] < self.max_curriculum_level and self.total_time_balanced >= 350 and self.mode == 'train':
             self.config['curriculum_level'] += 1
             print(f'Curriculum level {self.config['curriculum_level']}')
 
