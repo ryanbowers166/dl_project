@@ -409,15 +409,19 @@ if __name__ == "__main__":
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
 
-    # for pos_cost_multiplier in [15, 20, 25]:
-    #     config['pos_cost_multiplier'] = pos_cost_multiplier
+    # for pos_cost_multiplier in [20, 15]:
+    #     for gamma in [0.999, 0.99, 0.998]:
+    #         config['pos_cost_multiplier'] = pos_cost_multiplier
+    #         config['gamma'] = gamma
     #
-    #     print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    #     model = train_ppo_agent(config,"train")
+    #         print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+    #         model = train_ppo_agent(config,"train")
 
     # Test the trained agent
     print("\nTesting trained agent...")
-    test_trained_agent(config, "test", model_path="./saved_models/0607_0331_PPO_QuadPole2D_lr5e04_env6_7.0M", n_episodes=10, manual_goal_position="dynamic-1")
+    test_trained_agent(config, "test", model_path="./saved_models/gamma sweep/0607_1042_poscos20_gamma999", n_episodes=2, manual_goal_position="dynamic-1")
+
+    test_trained_agent(config, "test", model_path="./saved_models/gamma sweep/0607_1638_poscost15_gamma99", n_episodes=2, manual_goal_position="dynamic-1")
 
     # Visualize performance
     #print("\nVisualizing performance...")
