@@ -1,4 +1,19 @@
+import multiprocessing
+from datetime import datetime
+import numpy as np
+import gymnasium as gym
+import matplotlib.pyplot as plt
+import matplotlib.backends.backend_agg as agg
+import pygame
+import json
 
+from stable_baselines3 import PPO
+from stable_baselines3.common.env_util import make_vec_env
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
+import matplotlib.pyplot as plt
+
+from quadrotor_env import QuadPole2D
 
 def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
     """
@@ -119,3 +134,6 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, ma
     print(f"Average episode length: {np.mean(episode_lengths):.2f} ± {np.std(episode_lengths):.2f}")
 
     return episode_rewards, episode_lengths
+
+if __name__ == "__main__":
+    test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
