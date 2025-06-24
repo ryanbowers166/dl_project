@@ -401,21 +401,15 @@ def visualize_performance(config, model_path="quadpole_ppo"):
 
 if __name__ == "__main__":
 
+    # Load config from json file
     config_filename = './configs/config_v4.json'
-
     with open(config_filename, 'r') as file:
         config = json.load(file)
-
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
-
-    # for pos_cost_multiplier in [20, 15]:
-    #     for gamma in [0.999, 0.99, 0.998]:
-    #         config['pos_cost_multiplier'] = pos_cost_multiplier
-    #         config['gamma'] = gamma
-    #
-    #         print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    #         model = train_ppo_agent(config,"train")
+    
+    print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
+    model = train_ppo_agent(config,"train")
 
     # Test the trained agent
     print("\nTesting trained agent...")
