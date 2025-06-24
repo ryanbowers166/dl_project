@@ -2,7 +2,7 @@ import numpy as np
 import pygame
 import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
-from quadrotor_env_new import QuadPole2D
+from quadrotor_env import QuadPole2D
 import time
 import json
 
@@ -23,7 +23,7 @@ def test_quadrotor_env_human(config_filename):
         config = json.load(file)
 
     # Initialize environment
-    env = QuadPole2D(config, max_steps=1000, timestep=0.02)  # Longer episodes for human play
+    env = QuadPole2D(config, "human", max_steps=1000, timestep=0.02)  # Longer episodes for human play
 
     # Control variables
     left_thrust = 0.0  # Thrust adjustment for left rotor
@@ -173,7 +173,7 @@ def test_quadrotor_env_human(config_filename):
         # Add control instructions overlay
         font = pygame.font.Font(None, 24)
         instructions = [
-            "Controls: ↑↓←→ for thrust, Q/E for individual rotors",
+            "Controls: Arrow keys for thrust, Q/E for individual rotors",
             "SPACE: Reset thrust, R: Reset env, P: Pause, ESC: Exit"
         ]
 
@@ -330,7 +330,7 @@ def test_quadrotor_env_auto():
 
 if __name__ == "__main__":
 
-    config_filename = './configs/config.json'
+    config_filename = './configs/config_v4.json'
 
     print("QuadPole2D Environment Test")
     print("Choose mode:")

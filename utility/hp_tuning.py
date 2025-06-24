@@ -126,14 +126,14 @@ def objective(trial):
     # Setup callbacks
     wandb_callback = WandbCallback(
         gradient_save_freq=100,
-        # model_save_path=f"models/{run.id}",
+        # model_save_path=f"other/{run.id}",
         verbose=2,
     )
 
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=f"./saved_models/best",
-        log_path=f"./logs",
+        best_model_save_path=f"../saved_models/best",
+        log_path=f"../logs",
         eval_freq=10000,  # Evaluate every 10k steps
         deterministic=True,
         render=False

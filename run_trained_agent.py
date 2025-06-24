@@ -2,20 +2,17 @@ import multiprocessing
 from datetime import datetime
 import numpy as np
 import gymnasium as gym
-import matplotlib.pyplot as plt
 import matplotlib.backends.backend_agg as agg
 import pygame
 import json
 
 from stable_baselines3 import PPO
-from stable_baselines3.common.env_util import make_vec_env
-from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
+from training_pipeline import QuadPole2DWrapper
 import matplotlib.pyplot as plt
 
 from quadrotor_env import QuadPole2D
 
-def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
+def test_trained_agent(config, render_mode, model_path, n_episodes=5, manual_goal_position=None):
     """
     Test a trained agent
 
@@ -43,7 +40,7 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, ma
     model = PPO.load(model_path)
 
     # Create test environment
-    env = QuadPole2DWrapper(config, mode, manual_goal_position)
+    env = QuadPole2DWrapper(config, render_mode, manual_goal_position)
 
     episode_rewards = []
     episode_lengths = []
@@ -135,5 +132,20 @@ def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, ma
 
     return episode_rewards, episode_lengths
 
+
 if __name__ == "__main__":
-    test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
+
+    config_filename = './configs/config_v4.json' # Choose which config file to use
+    model_path = './saved_models/gamma sweep/0607_1042_poscos20_gamma999' # Choose which model to load (should be a zipped file or compressed folder)
+
+    with open(config_filename, 'r') as file:
+        config = json.load(file)
+    config['config_filename'] = config_filename
+
+    print("\nTesting trained agent...")
+    test_trained_agent(
+        config,
+        render_mode='human',
+        model_path=model_path,
+        n_episodes=5,
+        manual_goal_position=None)

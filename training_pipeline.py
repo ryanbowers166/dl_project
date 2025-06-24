@@ -10,7 +10,7 @@ import json
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.callbacks import EvalCallback, BaseCallback
+from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CheckpointCallback
 import matplotlib.pyplot as plt
 import wandb
 from wandb.integration.sb3 import WandbCallback
@@ -20,9 +20,9 @@ from quadrotor_env import QuadPole2D
 class QuadPole2DWrapper(gym.Env):
     """Gymnasium wrapper for QuadPole2D environment"""
 
-    def __init__(self, config, mode, manual_goal_position):
+    def __init__(self, config, render_mode, manual_goal_position):
         super().__init__()
-        self.env = QuadPole2D(config, mode, manual_goal_position)
+        self.env = QuadPole2D(config, render_mode, manual_goal_position)
 
         # Use the observation and action spaces from the original environment
         self.observation_space = self.env.observation_space
@@ -40,9 +40,9 @@ class QuadPole2DWrapper(gym.Env):
         obs, reward, terminated, truncated, info = self.env.step(action)
         return obs.astype(np.float32), reward, terminated, truncated, info
 
-    def render(self, mode='human'):
+    def render(self, render_mode='human'):
         """Render the environment (optional)"""
-        pass  # Implement if needed for visualization
+        pass
 
     def _time_balanced(self):
         """Expose the time_balanced metric from the underlying environment"""
@@ -53,9 +53,9 @@ class QuadPole2DWrapper(gym.Env):
         pass
 
 
-def make_env(config, mode, manual_goal_position=None):
+def make_env(config, render_mode, manual_goal_position=None):
     """Factory function to create environment instances"""
-    return Monitor(QuadPole2DWrapper(config, mode, manual_goal_position))
+    return Monitor(QuadPole2DWrapper(config, render_mode, manual_goal_position))
 
 
 def generate_run_name(config):
@@ -99,10 +99,11 @@ def generate_run_name(config):
 class CustomMetricsCallback(BaseCallback):
     """Custom callback to log environment-specific metrics to wandb"""
 
-    def __init__(self, eval_env, log_freq=1000, verbose=0):
+    def __init__(self, eval_env, log_freq=1000, use_wandb=False, verbose=0):
         super().__init__(verbose)
         self.eval_env = eval_env
         self.log_freq = log_freq
+        self.use_wandb = use_wandb
 
     def _on_step(self) -> bool:
         if self.n_calls % self.log_freq == 0:
@@ -131,17 +132,24 @@ class CustomMetricsCallback(BaseCallback):
                 time_balanced = self.eval_env.env.env.total_time_balanced
 
             # Log custom metrics to wandb
-            wandb.log({
-                "c_eval/episode_reward": episode_reward,
-                "c_eval/episode_length": episode_length,
-                "c_eval/time_balanced": time_balanced,
-                "c_eval/max_payload_angle": max_payload_angle,
-                "c_eval/final_position_error": np.linalg.norm(obs[:2]),
-            }, step=self.num_timesteps)
+            if self.use_wandb:
+                wandb.log({
+                    "c_eval/episode_reward": episode_reward,
+                    "c_eval/episode_length": episode_length,
+                    "c_eval/time_balanced": time_balanced,
+                    "c_eval/max_payload_angle": max_payload_angle,
+                    "c_eval/final_position_error": np.linalg.norm(obs[:2]),
+                }, step=self.num_timesteps)
+            else:
+                # Optional: print metrics to console instead
+                print(f"Step {self.num_timesteps}: reward={episode_reward:.2f}, "
+                      f"time_balanced={time_balanced:.2f}, max_angle={max_payload_angle:.2f}")
+
+            return True
 
         return True
 
-def train_ppo_agent(config,mode, manual_goal_position=None):
+def train_ppo_agent(config, render_mode, manual_goal_position=None, use_wandb = True):
     """
     Train a PPO agent on the QuadPole2D environment
     Args:
@@ -150,21 +158,24 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
         save_path: Path to save the trained model
     """
 
-    # Load config
+    # Generate unique run name
     run_name = generate_run_name(config)
 
     # Create envs for training and eval
-    env = make_vec_env(lambda: make_env(config,mode, manual_goal_position), n_envs=config['n_envs'])
+    env = make_vec_env(lambda: make_env(config, render_mode, manual_goal_position), n_envs=config['n_envs'])
     eval_env = make_env(config,"eval", manual_goal_position)
 
-    run = wandb.init(
-        project='dl-project',
-        name='gcrl_poscost'+str(config['pos_cost_multiplier'])+run_name,
-        config=config,
-        sync_tensorboard=True,
-        monitor_gym=True,
-        save_code=True,
-    )
+    if use_wandb:
+        run = wandb.init(
+            project='dl-project',
+            name=run_name,
+            config=config,
+            sync_tensorboard=True,
+            monitor_gym=True,
+            save_code=True,
+        )
+
+    tensorboard_log = f"./logs/runs/{run_name}" if config.get('use_wandb', False) else None
 
     model = PPO(
         "MlpPolicy",
@@ -179,33 +190,53 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
         ent_coef=config["ent_coef"],
         vf_coef=config["vf_coef"],
         verbose=2,
-        tensorboard_log=f"./logs/runs/{run.id}",  # Use wandb run ID for tensorboard
+        tensorboard_log=tensorboard_log,  # Use wandb run ID for tensorboard
     )
 
     ################################ Setup callbacks ################################
-    wandb_callback = WandbCallback(gradient_save_freq=100, verbose=2,)
+    callbacks = []
+
+    if use_wandb:
+        wandb_callback = WandbCallback(gradient_save_freq=100, verbose=2)
+        callbacks.append(wandb_callback)
+
     eval_callback = EvalCallback(
         eval_env,
-        best_model_save_path=f"./saved_models/best",
-        log_path=f"./logs",
-        eval_freq=10000,  # Evaluate every 10k steps
+        best_model_save_path=f"./saved_models/{run_name}/best",
+        log_path=f"./logs/runs/{run_name}/eval",
+        eval_freq=10000,
         deterministic=True, render=False
     )
+    callbacks.append(eval_callback)
+
     custom_callback = CustomMetricsCallback(
         eval_env=eval_env,
-        log_freq=5000,  # Log custom metrics every 5k steps
+        log_freq=5000,
+        use_wandb=use_wandb
     )
+    callbacks.append(custom_callback)
+
+    checkpoint_callback = CheckpointCallback(
+        save_freq=25000,
+        save_path=f"./saved_models/{run_name}/checkpoints/",
+        name_prefix="checkpoint",
+        save_replay_buffer=False,
+        save_vecnormalize=False,
+        verbose=1
+    )
+    callbacks.append(checkpoint_callback)
 
 
     ################################ Start training ################################
     print("Starting training...")
     model.learn(
         total_timesteps=config['total_timesteps'],
-        callback=[wandb_callback, eval_callback, custom_callback],
+        callback=callbacks,
         progress_bar=True
     )
 
-    run.finish()
+    if use_wandb:
+        run.finish()
 
     # Save the final model
     model.save(f'./saved_models/{run_name}')
@@ -214,209 +245,18 @@ def train_ppo_agent(config,mode, manual_goal_position=None):
     return model
 
 
-def test_trained_agent(config, mode, model_path="quadpole_ppo", n_episodes=5, manual_goal_position=None):
-    """
-    Test a trained agent
-
-    Args:
-        model_path: Path to the saved model
-        n_episodes: Number of episodes to test
-    """
-
-    config['curriculum_level'] = 2
-
-    # Initialize pygame
-    #pygame.init()
-    pygame.display.init()
-    pygame.mixer.pre_init()#frequency=44100, size=-16, channels=2, buffersize=512, allowedchanges=pygame.AUDIO_ALLOW_ANY_CHANGE)
-    pygame.mixer.init()
-    #pygame.joystick.init()
-
-    # Set up display
-    width, height = 800, 600
-    screen = pygame.display.set_mode((width, height))
-    pygame.display.set_caption("QuadPole2D Environment Test")
-    clock = pygame.time.Clock()
-
-    # Load the trained model
-    model = PPO.load(model_path)
-
-    # Create test environment
-    env = QuadPole2DWrapper(config, mode, manual_goal_position)
-
-    episode_rewards = []
-    episode_lengths = []
-
-    for episode in range(n_episodes):
-        obs, info = env.reset()
-        episode_reward = 0
-        episode_length = 0
-        done = False
-
-        while not done:
-            # Handle pygame events to prevent window from becoming unresponsive
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    return episode_rewards, episode_lengths
-
-            # Use the trained policy to select actions
-            action, _states = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = env.step(action)
-
-            # Create matplotlib figure for rendering
-            fig, ax = plt.subplots(figsize=(8, 6))
-            ax.set_facecolor('lightblue')
-
-            # Render the environment - pass the observation to the render method
-            env.env.render(ax, observation=obs)  # Use env.env to access the QuadPole2D instance
-
-            # Add episode info to the plot
-            ax.text(0.02, 0.98, f'Episode: {episode + 1}',
-                    transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            ax.text(0.02, 0.92, f'Step: {episode_length + 1}',
-                    transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            ax.text(0.02, 0.86, f'Reward: {reward:.2f}',
-                    transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-            ax.text(0.02, 0.80, f'Total Reward: {episode_reward:.2f}',
-                    transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-
-            # Add action info
-            ax.text(0.98, 0.98, f'Action: [{action[0]:.2f}, {action[1]:.2f}]',
-                    transform=ax.transAxes, fontsize=12,
-                    verticalalignment='top', horizontalalignment='right',
-                    bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
-
-            ax.set_title(f'QuadPole2D - Episode {episode + 1}')
-            ax.grid(True, alpha=0.3)
-
-            # Convert matplotlib figure to pygame surface
-            canvas = agg.FigureCanvasAgg(fig)
-            canvas.draw()
-            renderer = canvas.get_renderer()
-
-            # Get the RGBA buffer and convert to RGB
-            buf = renderer.buffer_rgba()
-            size = canvas.get_width_height()
-
-            # Create pygame surface from matplotlib data
-            surf = pygame.image.frombuffer(buf, size, 'RGBA')
-
-            # Scale to fit screen if necessary
-            surf = pygame.transform.scale(surf, (width, height))
-
-            # Blit to screen
-            screen.blit(surf, (0, 0))
-            pygame.display.flip()
-
-            # Close matplotlib figure to free memory
-            plt.close(fig)
-
-            # Control frame rate
-            clock.tick(30)  # 30 FPS
-
-            episode_reward += reward
-            episode_length += 1
-            done = terminated or truncated
-
-        episode_rewards.append(episode_reward)
-        episode_lengths.append(episode_length)
-
-        print(f"Episode {episode + 1}: Reward = {episode_reward:.2f}, Length = {episode_length}")
-
-    pygame.quit()
-    print(f"\nAverage reward: {np.mean(episode_rewards):.2f} ± {np.std(episode_rewards):.2f}")
-    print(f"Average episode length: {np.mean(episode_lengths):.2f} ± {np.std(episode_lengths):.2f}")
-
-    return episode_rewards, episode_lengths
-
-
-def visualize_performance(config, model_path="quadpole_ppo"):
-    """
-    Visualize the trained agent's performance
-    """
-    # Load the trained model
-    model = PPO.load(model_path)
-    env = QuadPole2DWrapper(config)
-
-    # Run one episode and collect trajectory
-    obs, info = env.reset()
-    trajectory = [obs.copy()]
-    actions = []
-    rewards = []
-    done = False
-
-    while not done:
-        action, _states = model.predict(obs, deterministic=True)
-        obs, reward, terminated, truncated, info = env.step(action)
-        env.render()
-
-        trajectory.append(obs.copy())
-        actions.append(action)
-        rewards.append(reward)
-        done = terminated or truncated
-
-    trajectory = np.array(trajectory)
-
-    # Plot trajectory
-    fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-
-    # Position trajectory
-    axes[0, 0].plot(trajectory[:, 0], trajectory[:, 1])
-    axes[0, 0].set_xlabel('X Position')
-    axes[0, 0].set_ylabel('Z Position')
-    axes[0, 0].set_title('Quadrotor Trajectory')
-    axes[0, 0].grid(True)
-
-    # Quadrotor angle over time
-    theta = np.arctan2(trajectory[:, 4], trajectory[:, 5])  # From sin/cos
-    axes[0, 1].plot(theta)
-    axes[0, 1].set_xlabel('Time Steps')
-    axes[0, 1].set_ylabel('Quadrotor Angle (rad)')
-    axes[0, 1].set_title('Quadrotor Orientation')
-    axes[0, 1].grid(True)
-
-    # Payload angle over time
-    phi = np.arctan2(trajectory[:, 7], trajectory[:, 8])  # From sin/cos
-    axes[1, 0].plot(phi)
-    axes[1, 0].set_xlabel('Time Steps')
-    axes[1, 0].set_ylabel('Payload Angle (rad)')
-    axes[1, 0].set_title('Payload Swing Angle')
-    axes[1, 0].grid(True)
-
-    # Rewards over time
-    axes[1, 1].plot(rewards)
-    axes[1, 1].set_xlabel('Time Steps')
-    axes[1, 1].set_ylabel('Reward')
-    axes[1, 1].set_title('Reward per Step')
-    axes[1, 1].grid(True)
-
-    plt.tight_layout()
-    plt.show()
-
 
 if __name__ == "__main__":
 
-    # Load config from json file
+    # Load config
     config_filename = './configs/config_v4.json'
+    use_wandb = False # Set to false if you don't want to log training metrics to wandb
+
     with open(config_filename, 'r') as file:
         config = json.load(file)
     config['config_filename'] = config_filename
     config['n_envs'] = multiprocessing.cpu_count()
+
     
     print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    model = train_ppo_agent(config,"train")
-
-    # Test the trained agent
-    print("\nTesting trained agent...")
-    test_trained_agent(config, "test", model_path="./saved_models/gamma sweep/0607_1042_poscos20_gamma999", n_episodes=2, manual_goal_position="dynamic-1")
-
-    test_trained_agent(config, "test", model_path="./saved_models/gamma sweep/0607_1638_poscost15_gamma99", n_episodes=2, manual_goal_position="dynamic-1")
-
-    # Visualize performance
-    #print("\nVisualizing performance...")
-    #visualize_performance(config, model_path="saved_models.zip")
+    model = train_ppo_agent(config,"train", use_wandb=use_wandb)

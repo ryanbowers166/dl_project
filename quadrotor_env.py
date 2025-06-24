@@ -57,10 +57,6 @@ class QuadPole2D():
             low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
         )
 
-        # self.observation_space = gym.spaces.Box(
-        #     low=-np.inf, high=np.inf, shape=(10,), dtype=np.float32
-        # )
-
         self.action_space = gym.spaces.Box(
             low=-1.0, high=1.0, shape=(2,), dtype=np.float32
         )
