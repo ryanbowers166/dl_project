@@ -148,4 +148,4 @@ if __name__ == "__main__":
         render_mode='human',
         model_path=model_path,
         n_episodes=5,
-        manual_goal_position=None)
+        manual_goal_position="dynamic-1")

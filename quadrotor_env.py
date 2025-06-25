@@ -121,8 +121,6 @@ class QuadPole2D():
                 elif 0.40 <= rng < 0.60:self.goal_position = np.array([-1.0, -1.0])
                 elif 0.60 <= rng < 0.80:self.goal_position = np.array([1.0, -1.0])
                 elif 0.80 <= rng:self.goal_position = np.array([-1.0, 1.0])
-
-
             #elif self.config['curriculum_level'] >= 6: # Above CL 6, goal can be anywhere on the map
                 #self.goal_position = np.array([np.random.uniform(-1.5, 1.5), np.random.uniform(-1.5, 1.5)])
 
@@ -556,7 +554,7 @@ class QuadPole2D():
         ax.scatter(payload_pos[0], payload_pos[1], color=color, s=50, zorder=3, alpha=alpha)
 
         # --- Aesthetic Adjustments ---
-        # ax.set_aspect('equal')
+        ax.set_aspect('equal')
         ax.set_xlim(self._xbounds)
         ax.set_ylim(self._zbounds)
         ax.set_xticks([])
