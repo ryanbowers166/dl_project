@@ -1,0 +1,20 @@
+{
+  "total_timesteps": 7e6,
+  "learning_rate": 0.0005,
+  "n_steps": 2048,
+  "batch_size": 128,
+  "n_epochs": 24,
+  "gamma": 0.99,
+  "gae_lambda": 0.95,
+  "clip_range": 0.2,
+  "ent_coef": 0.01,
+  "vf_coef": 0.45,
+  "curriculum_level": 0,
+  "pos_cost_multiplier": 15,
+  "vel_cost_multiplier": 0.5,
+  "theta_cost_multiplier": 5.0,
+  "omega_cost_multiplier": 5,
+  "phi_cost_multipler": 25,
+  "phi_dot_cost_multipler": 5,
+  "balance_reward":100
+}
