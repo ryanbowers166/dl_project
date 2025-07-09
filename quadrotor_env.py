@@ -415,17 +415,17 @@ class QuadPole2D():
         # Compute the reward using the timestep-scaled cost terms
         reward = 0
         reward += self.timestep * np.sum([
-            - self.config['pos_cost_multiplier']*pos_cost,
-            - 0.5*vel_cost,       
-            - 5.0*theta_cost,    
-            - 5*omega_cost,
-            - (25.0*phi_cost - 25.0)*(1/(1 + 5*phi_dot_cost)) # Balancing reward (TODO this might be an issue)
+            - self.config.get('pos_cost_multiplier', 15)*pos_cost,
+            - self.config.get('vel_cost_multiplier', 0.5)*vel_cost,       
+            - self.config.get('theta_cost_multiplier', 5.0)*theta_cost,    
+            - self.config.get('omega_cost_multiplier', 5)*omega_cost,
+            - (self.config.get('phi_cost_multiplier', 25.0)*phi_cost - self.config.get('phi_cost_multiplier', 25.0))*(1/(1 + self.config.get('phi_dot_cost_multiplier', 5)*phi_dot_cost)) # Balancing reward
         ])
 
         # Apply a bonus reward if the quadrotor is balanced
         if state[8] < -0.92 and abs(state[9]) < 0.2: # Removed: np.sum(state[0:2]**2)**0.5 < self.balance_radius
             #print('BALANCED')
-            reward += 100*self.timestep
+            reward += (self.config.get('balance_reward', 100.0)*self.timestep
             self._time_balanced += self.timestep
             self.total_time_balanced += 1
         else:
