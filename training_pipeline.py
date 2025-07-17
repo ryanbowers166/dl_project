@@ -162,7 +162,7 @@ def train_ppo_agent(config, render_mode, manual_goal_position=None, use_wandb = 
     run_name = generate_run_name(config)
 
     # Create envs for training and eval
-    env = make_vec_env(lambda: make_env(config, render_mode, manual_goal_position), n_envs=config['n_envs'])
+    env = make_vec_env(lambda: make_env(config, render_mode, manual_goal_position), n_envs=config.get('n_envs', 4))
     eval_env = make_env(config,"eval", manual_goal_position)
 
     if use_wandb:

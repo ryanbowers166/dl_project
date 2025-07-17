@@ -1,0 +1,107 @@
+{
+  "sweep_timestamp": "2025-07-15T07:49:44.833932",
+  "total_configs_tested": 10,
+  "policies_found": {},
+  "detailed_results": [
+    {
+      "pos_cost_multiplier": 0.5,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 437.3101898432114,
+      "waypoint_capture_rate": 0.32,
+      "pendulum_drop_rate": 0.96,
+      "avg_time_to_capture": 5.2016,
+      "avg_time_balanced": 4.112799999999978
+    },
+    {
+      "pos_cost_multiplier": 1.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 818.2188839819249,
+      "waypoint_capture_rate": 0.4,
+      "pendulum_drop_rate": 0.96,
+      "avg_time_to_capture": 6.8448,
+      "avg_time_balanced": 6.474399999999934
+    },
+    {
+      "pos_cost_multiplier": 2.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 342.8156779531881,
+      "waypoint_capture_rate": 0.44,
+      "pendulum_drop_rate": 0.96,
+      "avg_time_to_capture": 4.16,
+      "avg_time_balanced": 3.380799999999981
+    },
+    {
+      "pos_cost_multiplier": 3.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 471.5271453291655,
+      "waypoint_capture_rate": 0.4,
+      "pendulum_drop_rate": 0.96,
+      "avg_time_to_capture": 6.453600000000002,
+      "avg_time_balanced": 4.971199999999964
+    },
+    {
+      "pos_cost_multiplier": 4.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 740.7658797130093,
+      "waypoint_capture_rate": 0.56,
+      "pendulum_drop_rate": 1.0,
+      "avg_time_to_capture": 5.8992,
+      "avg_time_balanced": 6.483199999999938
+    },
+    {
+      "pos_cost_multiplier": 5.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 774.1245596795214,
+      "waypoint_capture_rate": 0.64,
+      "pendulum_drop_rate": 0.96,
+      "avg_time_to_capture": 5.8392,
+      "avg_time_balanced": 6.515199999999936
+    },
+    {
+      "pos_cost_multiplier": 7.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 401.5060773503665,
+      "waypoint_capture_rate": 0.4,
+      "pendulum_drop_rate": 1.0,
+      "avg_time_to_capture": 6.1032,
+      "avg_time_balanced": 5.091999999999963
+    },
+    {
+      "pos_cost_multiplier": 10.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 651.191837323163,
+      "waypoint_capture_rate": 0.8,
+      "pendulum_drop_rate": 1.0,
+      "avg_time_to_capture": 6.471199999999999,
+      "avg_time_balanced": 6.400799999999939
+    },
+    {
+      "pos_cost_multiplier": 15.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 724.9936026317871,
+      "waypoint_capture_rate": 0.92,
+      "pendulum_drop_rate": 0.92,
+      "avg_time_to_capture": 5.7783999999999995,
+      "avg_time_balanced": 7.318399999999931
+    },
+    {
+      "pos_cost_multiplier": 20.0,
+      "policy_type": "Unclassified",
+      "meets_criteria": false,
+      "avg_episode_reward": 330.72629826726086,
+      "waypoint_capture_rate": 0.64,
+      "pendulum_drop_rate": 1.0,
+      "avg_time_to_capture": 4.948799999999999,
+      "avg_time_balanced": 5.029599999999958
+    }
+  ]
+}

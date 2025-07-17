@@ -1,5 +1,12 @@
 import multiprocessing
 from datetime import datetime
+# Fix for numpy compatibility issue with older saved models
+import sys
+try:
+    import numpy._core.numeric as _numeric
+except ImportError:
+    import numpy.core.numeric as _numeric
+    sys.modules['numpy._core.numeric'] = _numeric
 import numpy as np
 import gymnasium as gym
 import matplotlib.backends.backend_agg as agg
@@ -23,11 +30,11 @@ def test_trained_agent(config, render_mode, model_path, n_episodes=5, manual_goa
 
     config['curriculum_level'] = 2
 
-    # Initialize pygame
+    # Initialize pygame (disable audio to avoid "No such audio device" error)
     #pygame.init()
     pygame.display.init()
-    pygame.mixer.pre_init()#frequency=44100, size=-16, channels=2, buffersize=512, allowedchanges=pygame.AUDIO_ALLOW_ANY_CHANGE)
-    pygame.mixer.init()
+    #pygame.mixer.pre_init()#frequency=44100, size=-16, channels=2, buffersize=512, allowedchanges=pygame.AUDIO_ALLOW_ANY_CHANGE)
+    #pygame.mixer.init()
     #pygame.joystick.init()
 
     # Set up display
@@ -135,8 +142,9 @@ def test_trained_agent(config, render_mode, model_path, n_episodes=5, manual_goa
 
 if __name__ == "__main__":
 
-    config_filename = './configs/config_v4.json' # Choose which config file to use
-    model_path = './saved_models/gamma sweep/0607_1042_poscos20_gamma999' # Choose which model to load (should be a zipped file or compressed folder)
+    config_filename = './configs/config_v5.json' # Choose which config file to use
+    # model_path = './saved_models/gamma sweep/0607_1042_poscos20_gamma999' # Choose which model to load (should be a zipped file or compressed folder)
+    model_path = './saved_models/0715_0230_PPO_QuadPole2D_lr5e04_env4_7.0M_2' # Choose which model to load (should be a zipped file or compressed folder)
 
     with open(config_filename, 'r') as file:
         config = json.load(file)

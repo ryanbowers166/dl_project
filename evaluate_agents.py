@@ -311,13 +311,11 @@ def main():
     Main evaluation function
     """
     # Configuration
-    config_filename = './configs/config_v4.json'
+    config_filename = './configs/config_v5.json'
 
     # List of model paths to evaluate
     model_paths = [
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma999',
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma995',
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma99',
+        './saved_models/0715_0644_PPO_QuadPole2D_lr5e04_env4_7.0M_2',
         # Add more model paths as needed
     ]
 
