@@ -1,5 +1,6 @@
 import numpy as np
 import gymnasium as gym
+import pygame
 
 class QuadPole2D():
     def __init__(
@@ -60,6 +61,11 @@ class QuadPole2D():
         self.action_space = gym.spaces.Box(
             low=-1.0, high=1.0, shape=(2,), dtype=np.float32
         )
+
+        self.goal_reach_times = []  # Stores tuples of (goal_position, time_to_reach)
+        self.current_goal_start_time = 0
+        self.goal_reached = False
+        self.last_goal_position = None
 
     def _wrap_action(self, action):
         """
@@ -155,6 +161,11 @@ class QuadPole2D():
 
         # Save the initial state for potential restarts
         self._initial_state = self.state_dict.copy()
+
+        self.goal_reach_times = []
+        self.current_goal_start_time = 0
+        self.goal_reached = False
+        self.last_goal_position = self.goal_position.copy()
 
         # Return the initial observation and info
         return self._get_obs(), self._get_info()
@@ -389,8 +400,18 @@ class QuadPole2D():
                 self.goal_position = np.array([1.0, 1.0])
             else:
                 self.goal_position = np.array([0.0, 0.0])
-                print('GOAL POSITION CHANGED')
-        
+                #print('GOAL POSITION CHANGED')
+
+        # Check if goal position changed
+        if not np.array_equal(self.goal_position, self.last_goal_position):
+            # Record if previous goal was not reached
+            if not self.goal_reached:
+                self.goal_reach_times.append((self.last_goal_position.copy(), -1))
+            # New goal starts now
+            self.current_goal_start_time = self._time
+            self.goal_reached = False
+            self.last_goal_position = self.goal_position.copy()
+
         # Wrap the action
         action = self._wrap_action(action)
 
@@ -439,6 +460,13 @@ class QuadPole2D():
         self._steps += 1
         self._time += self.timestep
 
+        if not self.goal_reached:
+            distance_to_goal = np.linalg.norm(state[0:2] - self.goal_position)
+            if distance_to_goal < 0.5:
+                self.goal_reached = True
+                time_to_reach = self._time - self.current_goal_start_time
+                self.goal_reach_times.append((self.goal_position.copy(), time_to_reach))
+
         # Apply heavy penalty if out-of-bounds
         oob = self.out_of_bounds()
         if oob:
@@ -451,111 +479,76 @@ class QuadPole2D():
 
         return state, reward, terminated, truncated, info
 
-    def render(self, ax, observation=None, color='black', alpha=1.0):
+    def render(self, screen, observation=None):
         """
-        Renders the quadrotor and its suspended payload on the given matplotlib axis.
-        It draws the quadrotor body, its arms with rotors, and the tethered payload.
-        Note:
-            - The state vector is expected to be of length 10 with the following elements:
-              [x, z, vx, vz, s_theta, c_theta, theta_dot, s_phi, c_phi, phi_dot]
-            - If an observation is provided, it is used as the state vector; otherwise, `self.state`
-              is assumed to hold the current state.
-            - The appearance of the render (color and transparency) can be adjusted via the `color`
-              and `alpha` arguments.
-        Parameters:
-            ax (matplotlib.axes.Axes): The axis object on which to render the quadrotor.
-            observation (array-like, optional): The state vector to be rendered. If not provided,
-                                                  `self.state` is used.
-            color (str or tuple, optional): The color used for drawing the quadrotor, arms, rotors,
-                                            tether, and payload. Default is 'black'.
-            alpha (float, optional): The transparency (opacity) level for the rendered elements.
-                                     Default is 1.0.
-        Returns:
-            None
+        Render the quadrotor and payload using pygame to visually match the old matplotlib style.
+        Args:
+            screen (pygame.Surface): The pygame display surface.
+            observation (array-like, optional): State to render. If None, uses self.state.
         """
-        # --- State Extraction ---
-        # Assume self.state holds the current 2D state if observation is not provided.
         if observation is None:
             state = self.state
         else:
             state = observation
 
-        # Unpack the state vector
-        x, z, vx, vz, s_theta, c_theta, theta_dot, s_phi, c_phi, phi_dot, goal_x, goal_y = state
+        # Unpack state
+        x, z, vx, vz, s_theta, c_theta, theta_dot, s_phi, c_phi, phi_dot, goal_x, goal_z = state
         pos = np.array([x, z])
+        width, height = screen.get_size()
+        screen.fill((255, 255, 255))  # Clear background
 
-        ax.axhline(0, color=(0, 0, 0, 0.3), lw=1, linestyle='--')
-        ax.axvline(0, color=(0, 0, 0, 0.3), lw=1, linestyle='--') 
+        # World to screen transform
+        def world_to_screen(wx, wz):
+            scale = 100  # pixels per meter
+            cx, cz = width // 2, height // 2
+            return int(cx + wx * scale), int(cz - wz * scale)
 
-        # Draw circle around origin
-        radius = 0.25  # Radius of the circle
-        theta = np.linspace(0, 2*np.pi, 100)
-        circle_x = radius * np.cos(theta)
-        circle_y = radius * np.sin(theta)
-        ax.plot(circle_x, circle_y, color=(0, 0, 0, 0.3), lw=1, linestyle='--')
+        # Axes
+        pygame.draw.line(screen, (180, 180, 180), (0, height // 2), (width, height // 2), 1)  # horizontal
+        pygame.draw.line(screen, (180, 180, 180), (width // 2, 0), (width // 2, height), 1)  # vertical
 
-        # Render goal position
-        ax.scatter(goal_x, goal_y, color='red', marker='x', s=100, zorder=4, alpha=alpha, linewidths=3)
-        
-        # --- Quadrotor Rendering ---
-        # Draw the quadrotor body as a scatter point.
-        ax.scatter(pos[0], pos[1], color=color, s=50, zorder=3, alpha=alpha)
+        # Origin circle
+        origin_radius_px = int(0.25 * 100)
+        origin_x, origin_z = world_to_screen(0, 0)
+        pygame.draw.circle(screen, (150, 150, 150), (origin_x, origin_z), origin_radius_px, width=1)
 
-        # Compute the rotation matrix for the quadrotor (2D)
-        R = np.array([[c_theta, -s_theta],
-                    [s_theta, c_theta]])
+        # Goal marker
+        goal_px, goal_pz = world_to_screen(goal_x, goal_z)
+        pygame.draw.line(screen, (255, 0, 0), (goal_px - 10, goal_pz - 10), (goal_px + 10, goal_pz + 10), 2)
+        pygame.draw.line(screen, (255, 0, 0), (goal_px - 10, goal_pz + 10), (goal_px + 10, goal_pz - 10), 2)
 
-        # Arm and rotor parameters
-        Lq = self.Lq  # Arm length
-        rotor_line_length = 0.4 * Lq  # Length of line representing the rotor
-        half_line = rotor_line_length / 2.0
+        # Quadrotor body
+        quad_x, quad_z = world_to_screen(x, z)
+        pygame.draw.circle(screen, (0, 0, 0), (quad_x, quad_z), 5)
 
-        # Define rotor offsets in the body frame (one on each side)
+        # Arm/rotor bars
+        Lq = self.Lq
+        rot_mat = np.array([[c_theta, -s_theta], [s_theta, c_theta]])
         rotor_offset1 = np.array([Lq, 0.2])
         rotor_offset2 = np.array([-Lq, 0.2])
+        rotor1_world = pos + rot_mat @ rotor_offset1
+        rotor2_world = pos + rot_mat @ rotor_offset2
 
-        # Transform rotor positions to inertial frame
-        rotor1 = pos + R @ rotor_offset1
-        rotor2 = pos + R @ rotor_offset2
+        r1_x, r1_z = world_to_screen(*rotor1_world)
+        r2_x, r2_z = world_to_screen(*rotor2_world)
 
-        # Draw arms: lines from the quadrotor center to each rotor position
-        ax.plot([pos[0], rotor1[0]], [pos[1], rotor1[1]], color=color, lw=2, alpha=alpha)
-        ax.plot([pos[0], rotor2[0]], [pos[1], rotor2[1]], color=color, lw=2, alpha=alpha)
+        pygame.draw.line(screen, (0, 0, 0), (quad_x, quad_z), (r1_x, r1_z), 2)
+        pygame.draw.line(screen, (0, 0, 0), (quad_x, quad_z), (r2_x, r2_z), 2)
 
-        # --- Rotated Rotor Representation ---
-        # Create a rotor line in its local frame (centered at zero)
-        rotor_line_local = np.array([[-half_line, half_line], [0, 0]])
+        # Rotor bars (horizontal)
+        rotor_line_len = 0.4 * Lq
+        half_len = rotor_line_len / 2
+        for rotor in [rotor1_world, rotor2_world]:
+            center = rotor
+            p1 = center + rot_mat @ np.array([-half_len, 0])
+            p2 = center + rot_mat @ np.array([half_len, 0])
+            p1x, p1z = world_to_screen(*p1)
+            p2x, p2z = world_to_screen(*p2)
+            pygame.draw.line(screen, (0, 0, 0), (p1x, p1z), (p2x, p2z), 3)
 
-        # Rotate the rotor line by the same rotation matrix R (to align with vehicle orientation)
-        rotor_line_rotated = R @ rotor_line_local  # shape (2,2)
-
-        # Draw the rotor line for rotor1 at its computed position
-        ax.plot(rotor_line_rotated[0, :] + rotor1[0],
-                rotor_line_rotated[1, :] + rotor1[1],
-                color=color, lw=3, alpha=alpha)
-
-        # Draw the rotor line for rotor2 similarly
-        ax.plot(rotor_line_rotated[0, :] + rotor2[0],
-                rotor_line_rotated[1, :] + rotor2[1],
-                color=color, lw=3, alpha=alpha)
-
-        # --- Payload (Suspended Load) Rendering ---
-        # Compute payload position using the pendulum angle.
-        # Reconstruct phi from sin(phi) and cos(phi)
+        # Tether and payload
         Lp = self.Lp
-        payload_pos = pos + np.array([Lp * s_phi, -Lp * c_phi])
-
-        # Draw the tether as a line from the quadrotor to the payload
-        ax.plot([pos[0], payload_pos[0]],
-                [pos[1], payload_pos[1]],
-                color=color, lw=1.5, alpha=alpha)
-
-        # Draw the payload as a small circle (scatter point)
-        ax.scatter(payload_pos[0], payload_pos[1], color=color, s=50, zorder=3, alpha=alpha)
-
-        # --- Aesthetic Adjustments ---
-        ax.set_aspect('equal')
-        ax.set_xlim(self._xbounds)
-        ax.set_ylim(self._zbounds)
-        ax.set_xticks([])
-        ax.set_yticks([])
+        payload = pos + np.array([Lp * s_phi, -Lp * c_phi])
+        payload_x, payload_z = world_to_screen(*payload)
+        pygame.draw.line(screen, (100, 100, 100), (quad_x, quad_z), (payload_x, payload_z), 2)
+        pygame.draw.circle(screen, (0, 0, 255), (payload_x, payload_z), 5)
