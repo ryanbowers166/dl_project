@@ -3,7 +3,7 @@ import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from run_trained_agent_LQR_Controller_best import test_agent_combined
+from run_trained_agent_with_LQR_Controller import test_agent_combined
 
 # === CONFIG ===
 POLICY_PATHS = [

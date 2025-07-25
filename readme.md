@@ -40,17 +40,17 @@ Key environment features:
 ## 📁 Repository Structure
 
 ```
-├── results/                    # Plots and other results from experiments
-├── configs/                    # .json config files for training
-├── saved_models/               # Pretrained RL models that can be loaded for evaluation
-├── evaluate_agents.py          # Load a group of trained agents to evaluate and compare them
-├── quadrotor_env.py            # Contians the QuadPole2D environment class
-├── run_hybrid_agent.py         # Run and evaluate a hybrid RL + LQR agent
-├── run_rl_agent.py             # Run and evaluate a RL agent
-├── test_env_human.py           # Allows the user to play the environment using keyboard inputs
-├── train.py                    # Main training script for the RL policies
+├── results/                                         # Plots and other results from experiments
+├── configs/                                         # .json config files for training
+├── saved_models/                                    # Pretrained RL models that can be loaded for evaluation
+├── evaluate_all_policies.py                         # Load a group of trained agents to evaluate and compare them, with or without the LQR safety controller.
+├── quadrotor_env.py                                 # Contians the QuadPole2D environment class
+├── run_trained_agent_with_LQR_Controller.py         # Run and evaluate a hybrid RL + LQR agent
+├── run_rl_agent.py                                  # Run and evaluate a RL agent
+├── test_env_human.py                                # Allows the user to play the environment using keyboard inputs
+├── train.py                                         # Main training script for the RL policies
 ```
 
 ## Acknowledgments
 
-This work was developed as part of the CS 7643: Deep Learning course at Georgia Tech. We thank Dr. Zzolt Kira and the TAs for their guidance.
+This work was developed as part of the CS 7643: Deep Learning course at Georgia Tech. We thank Dr. Zsolt Kira and the TAs for their guidance.
