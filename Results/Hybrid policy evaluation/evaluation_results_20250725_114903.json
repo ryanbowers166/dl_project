@@ -1,0 +1,78 @@
+{
+  "P_pos = 15": {
+    "time_to_first_waypoint": {
+      "mean": 2.079,
+      "std": 0.8228116430872864,
+      "median": 1.8599999999999999,
+      "success_rate": 1.0
+    },
+    "time_to_pendulum_upright": {
+      "mean": 1.5269999999999997,
+      "std": 0.7186730828408701,
+      "median": 1.51,
+      "success_rate": 1.0
+    },
+    "time_to_first_goal_state": {
+      "mean": 2.3175,
+      "std": 0.8615356928183533,
+      "median": 2.34,
+      "success_rate": 0.8
+    },
+    "pendulum_falls_count": {
+      "mean": 0.5,
+      "std": 0.806225774829855,
+      "median": 0.0,
+      "success_rate": 1.0
+    },
+    "time_to_second_waypoint": {
+      "mean": 8.316842105263158,
+      "std": 0.8880318429068973,
+      "median": 8.26,
+      "success_rate": 0.95
+    },
+    "time_to_reach_all_waypoints": {
+      "mean": 8.021,
+      "std": 1.5530933648689638,
+      "median": 8.21,
+      "success_rate": 1.0
+    }
+  },
+  "P_pos = 20": {
+    "time_to_first_waypoint": {
+      "mean": 1.9414285714285715,
+      "std": 1.0271865677168677,
+      "median": 1.68,
+      "success_rate": 0.7
+    },
+    "time_to_pendulum_upright": {
+      "mean": 1.3788235294117646,
+      "std": 1.0272400621708246,
+      "median": 1.22,
+      "success_rate": 0.85
+    },
+    "time_to_first_goal_state": {
+      "mean": 2.6033333333333335,
+      "std": 1.1076652121567339,
+      "median": 2.31,
+      "success_rate": 0.6
+    },
+    "pendulum_falls_count": {
+      "mean": 1.15,
+      "std": 1.0618380290797649,
+      "median": 1.0,
+      "success_rate": 1.0
+    },
+    "time_to_second_waypoint": {
+      "mean": 6.363076923076923,
+      "std": 0.3071302558896472,
+      "median": 6.22,
+      "success_rate": 0.65
+    },
+    "time_to_reach_all_waypoints": {
+      "mean": 5.616,
+      "std": 1.926034959876551,
+      "median": 6.22,
+      "success_rate": 0.75
+    }
+  }
+}

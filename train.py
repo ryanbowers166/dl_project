@@ -107,13 +107,21 @@ class CustomMetricsCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % self.log_freq == 0:
-            # Run a quick evaluation episode to get metrics
             obs, info = self.eval_env.reset()
             episode_reward = 0
             episode_length = 0
             time_balanced = 0
             max_payload_angle = 0
             done = False
+
+            reached_goal1 = False
+            reached_goal2 = False
+            goal1_reach_time = None
+            goal2_reach_time = None
+
+            # Access the raw env (unwrap Monitor -> Wrapper -> Raw)
+            raw_env = self.eval_env.env.env.env
+            timestep = raw_env.timestep
 
             while not done and episode_length < 500:
                 action, _ = self.model.predict(obs, deterministic=True)
@@ -128,8 +136,17 @@ class CustomMetricsCallback(BaseCallback):
                 phi = np.arctan2(s_phi, c_phi)
                 max_payload_angle = max(max_payload_angle, abs(phi))
 
-                # Track time balanced (if info contains it)
-                time_balanced = self.eval_env.env.env.total_time_balanced
+                # Time balanced
+                time_balanced = raw_env.total_time_balanced
+
+                # Position
+                position = obs[:2]
+                if not reached_goal1 and np.linalg.norm(position - np.array([1.0, 1.0])) < 0.25:
+                    reached_goal1 = True
+                    goal1_reach_time = episode_length * timestep
+                if not reached_goal2 and np.linalg.norm(position - np.array([0.0, 0.0])) < 0.25:
+                    reached_goal2 = True
+                    goal2_reach_time = episode_length * timestep
 
             # Log custom metrics to wandb
             if self.use_wandb:
@@ -139,15 +156,60 @@ class CustomMetricsCallback(BaseCallback):
                     "c_eval/time_balanced": time_balanced,
                     "c_eval/max_payload_angle": max_payload_angle,
                     "c_eval/final_position_error": np.linalg.norm(obs[:2]),
+                    "c_eval/goal1_reach_time": goal1_reach_time if goal1_reach_time is not None else -1,
+                    "c_eval/goal2_reach_time": goal2_reach_time if goal2_reach_time is not None else -1,
                 }, step=self.num_timesteps)
             else:
-                # Optional: print metrics to console instead
                 print(f"Step {self.num_timesteps}: reward={episode_reward:.2f}, "
-                      f"time_balanced={time_balanced:.2f}, max_angle={max_payload_angle:.2f}")
+                      f"time_balanced={time_balanced:.2f}, max_angle={max_payload_angle:.2f}, "
+                      f"goal1_time={goal1_reach_time}, goal2_time={goal2_reach_time}")
 
             return True
-
         return True
+
+    # def _on_step(self) -> bool:
+    #     if self.n_calls % self.log_freq == 0:
+    #         # Run a quick evaluation episode to get metrics
+    #         obs, info = self.eval_env.reset()
+    #         episode_reward = 0
+    #         episode_length = 0
+    #         time_balanced = 0
+    #         max_payload_angle = 0
+    #         done = False
+    #
+    #         while not done and episode_length < 500:
+    #             action, _ = self.model.predict(obs, deterministic=True)
+    #             obs, reward, terminated, truncated, info = self.eval_env.step(action)
+    #
+    #             episode_reward += reward
+    #             episode_length += 1
+    #             done = terminated or truncated
+    #
+    #             # Extract payload angle from observation
+    #             s_phi, c_phi = obs[7], obs[8]
+    #             phi = np.arctan2(s_phi, c_phi)
+    #             max_payload_angle = max(max_payload_angle, abs(phi))
+    #
+    #             # Track time balanced (if info contains it)
+    #             time_balanced = self.eval_env.env.env.total_time_balanced
+    #
+    #         # Log custom metrics to wandb
+    #         if self.use_wandb:
+    #             wandb.log({
+    #                 "c_eval/episode_reward": episode_reward,
+    #                 "c_eval/episode_length": episode_length,
+    #                 "c_eval/time_balanced": time_balanced,
+    #                 "c_eval/max_payload_angle": max_payload_angle,
+    #                 "c_eval/final_position_error": np.linalg.norm(obs[:2]),
+    #             }, step=self.num_timesteps)
+    #         else:
+    #             # Optional: print metrics to console instead
+    #             print(f"Step {self.num_timesteps}: reward={episode_reward:.2f}, "
+    #                   f"time_balanced={time_balanced:.2f}, max_angle={max_payload_angle:.2f}")
+    #
+    #         return True
+    #
+    #     return True
 
 def train_ppo_agent(config, render_mode, manual_goal_position=None, use_wandb = True):
     """
@@ -249,8 +311,8 @@ def train_ppo_agent(config, render_mode, manual_goal_position=None, use_wandb = 
 if __name__ == "__main__":
 
     # Load config
-    config_filename = './configs/config_v4.json'
-    use_wandb = False # Set to false if you don't want to log training metrics to wandb
+    config_filename = './configs/config_v5.json'
+    use_wandb = True # Set to false if you don't want to log training metrics to wandb
 
     with open(config_filename, 'r') as file:
         config = json.load(file)
@@ -259,4 +321,6 @@ if __name__ == "__main__":
 
     
     print(f"Training PPO agent on QuadPole2D environment with {config['n_envs']} envs")
-    model = train_ppo_agent(config,"train", use_wandb=use_wandb)
+    for pos_cost in [15, 20]:
+        config['pos_cost_multiplier'] = pos_cost
+        model = train_ppo_agent(config,"train", use_wandb=use_wandb)

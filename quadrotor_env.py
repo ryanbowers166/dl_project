@@ -425,7 +425,7 @@ class QuadPole2D():
         # Apply a bonus reward if the quadrotor is balanced
         if state[8] < -0.92 and abs(state[9]) < 0.2: # Removed: np.sum(state[0:2]**2)**0.5 < self.balance_radius
             #print('BALANCED')
-            reward += (self.config.get('balance_reward', 100.0)*self.timestep
+            reward += (self.config.get('balance_reward', 100.0)*self.timestep)
             self._time_balanced += self.timestep
             self.total_time_balanced += 1
         else:

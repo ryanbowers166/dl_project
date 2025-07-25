@@ -31,7 +31,7 @@ def evaluate_single_model(model_path, config, n_episodes=100):
     model = PPO.load(model_path)
 
     # Create test environment with dynamic goal position
-    env = QuadPole2DWrapper(config, render_mode=None, manual_goal_position="dynamic-1")
+    env = QuadPole2DWrapper(config, render_mode='human', manual_goal_position="dynamic-1")
 
     # Metrics storage
     metrics = {
@@ -111,10 +111,13 @@ def evaluate_episode(env, model, initial_obs):
     second_goal = np.array([0.0, 0.0])
     goal_switch_step = 250
 
+    pendulum_is_currently_upright = False
     while not done:
+
         # Use the trained policy to select actions
         action, _states = model.predict(obs, deterministic=True)
         obs, reward, terminated, truncated, info = env.step(action)
+        env.render()
 
         episode_length += 1
         current_time = episode_length * env.env.timestep
@@ -158,14 +161,21 @@ def evaluate_episode(env, model, initial_obs):
 
         # Track pendulum falls (only after it was initially upright)
         if pendulum_upright_achieved:
-            # Check if pendulum fell (more than 20 degrees from upright)
-            # cos(π ± 20°) ≈ cos(160°) ≈ -0.94, cos(π ± 20°) ≈ cos(200°) ≈ -0.94
-            pendulum_fell = c_phi > -0.82  # More than ~25 degrees from upright for some margin
-
-            if last_upright_check and pendulum_fell:
+            if c_phi < -0.92:
+                pendulum_is_currently_upright = True
+            elif c_phi > -0.82 and pendulum_is_currently_upright:
                 pendulum_falls_count += 1
+                pendulum_is_currently_upright = False
 
-            last_upright_check = is_pendulum_upright
+        # if pendulum_upright_achieved:
+        #     # Check if pendulum fell (more than 20 degrees from upright)
+        #     # cos(π ± 20°) ≈ cos(160°) ≈ -0.94, cos(π ± 20°) ≈ cos(200°) ≈ -0.94
+        #     pendulum_fell = c_phi > -0.82  # More than ~25 degrees from upright for some margin
+        #
+        #     if last_upright_check and pendulum_fell:
+        #         pendulum_falls_count += 1
+        #
+        #     last_upright_check = is_pendulum_upright
 
         done = terminated or truncated
 
@@ -234,28 +244,28 @@ def plot_comparison_metrics(results, save_path=None):
         x_pos = np.arange(len(model_names))
         bars = ax.bar(x_pos, means, yerr=stds, capsize=5, alpha=0.7)
 
-        # Color bars based on success rate
-        for j, (bar, success_rate) in enumerate(zip(bars, success_rates)):
-            if success_rate > 0.8:
-                bar.set_color('green')
-            elif success_rate > 0.5:
-                bar.set_color('orange')
-            else:
-                bar.set_color('red')
+        # # Color bars based on success rate
+        # for j, (bar, success_rate) in enumerate(zip(bars, success_rates)):
+        #     if success_rate > 0.8:
+        #         bar.set_color('green')
+        #     elif success_rate > 0.5:
+        #         bar.set_color('orange')
+        #     else:
+        #         bar.set_color('red')
 
         ax.set_xlabel('Model')
         ax.set_ylabel(metric_labels[metric])
-        ax.set_title(f'{metric_labels[metric]}\n(Color: Green=80%+, Orange=50-80%, Red=<50% success)')
+        ax.set_title(f'{metric_labels[metric]}')#\n(Color: Green=80%+, Orange=50-80%, Red=<50% success)')
         ax.set_xticks(x_pos)
         ax.set_xticklabels(model_names, rotation=45, ha='right')
         ax.grid(True, alpha=0.3)
 
-        # Add success rate text on bars
-        for j, (bar, success_rate) in enumerate(zip(bars, success_rates)):
-            height = bar.get_height()
-            if not np.isinf(height):
-                ax.text(bar.get_x() + bar.get_width() / 2., height + stds[j],
-                        f'{success_rate:.1%}', ha='center', va='bottom', fontsize=8)
+        # # Add success rate text on bars
+        # for j, (bar, success_rate) in enumerate(zip(bars, success_rates)):
+        #     height = bar.get_height()
+        #     if not np.isinf(height):
+        #         ax.text(bar.get_x() + bar.get_width() / 2., height + stds[j],
+        #                 f'{success_rate:.1%}', ha='center', va='bottom', fontsize=8)
 
     plt.tight_layout()
 
@@ -311,15 +321,20 @@ def main():
     Main evaluation function
     """
     # Configuration
-    config_filename = './configs/config_v4.json'
+    config_filename = './configs/config_v5.json'
 
     # List of model paths to evaluate
     model_paths = [
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma999',
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma995',
-        './saved_models/gamma sweep/0607_1042_poscos20_gamma99',
+        #'./saved_models/gamma sweep/0607_1042_poscos20_gamma999',
+        #'./saved_models/gamma sweep/0607_1042_poscos20_gamma995',
+        #'./saved_models/gamma sweep/0607_1042_poscos20_gamma99',
+        './saved_models/pos_cost sweep/0607_0040_PPO_QuadPole2D_lr5e04_env6_7.0M.zip',
+        './saved_models/pos_cost sweep/0607_0206_PPO_QuadPole2D_lr5e04_env6_7.0M.zip',
+        #'./saved_models/pos_cost sweep/0607_0331_PPO_QuadPole2D_lr5e04_env6_7.0M.zip'
         # Add more model paths as needed
     ]
+
+    num_episodes = 20
 
     # Load configuration
     with open(config_filename, 'r') as file:
@@ -336,11 +351,19 @@ def main():
             continue
 
         # Extract model name from path
-        model_name = Path(model_path).name
+        #model_name = Path(model_path).name
+        # Custom model names
+        custom_names = {
+            './saved_models/pos_cost sweep/0607_0040_PPO_QuadPole2D_lr5e04_env6_7.0M.zip': 'P_pos = 15',
+            './saved_models/pos_cost sweep/0607_0206_PPO_QuadPole2D_lr5e04_env6_7.0M.zip': 'P_pos = 20',
+            './saved_models/pos_cost sweep/0607_0331_PPO_QuadPole2D_lr5e04_env6_7.0M.zip': 'P_pos = 25'
+        }
+
+        model_name = custom_names.get(model_path, Path(model_path).name)
 
         try:
             # Evaluate the model
-            model_results = evaluate_single_model(model_path, config, n_episodes=100)
+            model_results = evaluate_single_model(model_path, config, n_episodes=num_episodes)
             results[model_name] = model_results
 
             print(f"Completed evaluation for {model_name}")

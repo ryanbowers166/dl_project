@@ -1,27 +1,56 @@
-## To train a new agent:
-1. Open training_pipeline.py
+# Toward Safe Quadrotor Navigation: Hybrid Learning-Based Control with Predictive Safety Mechanisms
 
-2. (Optional) Set which config file you want to train with (contains hyperparameters and other configurable options). config_v4.json is a good default.
+This repository accompanies our project on safe and reliable quadrotor navigation with suspended payloads. Our system integrates deep reinforcement learning, trajectory generation, predictive modeling, and safety-triggered fallback control to ensure robust performance in the face of dynamic disturbances and potential failures.
 
-3. 
+We combine learning-based and classical control methods to design a modular and interpretable control framework for aerial robots operating in uncertain environments.
 
-## To test a trained agent:
-1. Open run_trained_agent.py
+---
 
-2. Set config filename (or leave default v4)
+## 🧠 Project Overview
 
-3. Set model_path to the path of your trained policy (should be a zipped file or compressed folder)
+We present a hybrid control pipeline composed of four main components:
 
-4. Run
+1. **Goal-Conditioned PPO Controller**
+   A reinforcement learning agent trained using Proximal Policy Optimization (PPO) to navigate 2D waypoints while balancing a suspended pendulum payload.
 
-## To generate a dataset for state prediction (etc.)
+2. **Trajectory Generator**
+   A supervised model trained on optimal trajectories from a classical planner, generating full state-action paths between arbitrary start and goal states.
 
-You will need to set up a script to run a pretrained policy, and save the state->action transitions to a dataset. 
-Note that because the sampled state-action transitions inherently depend on the policy used, you should sample using 
-multiple different policies with different behaviors and skill levels. For example, a fully trained policy will tend to
-experience good (safe) states, while a checkpoint from early in that policy's training process will tend
-to experience bad (unsafe) states.
+3. **Predictive Stability Forecasting**
+   An LSTM-based classifier that anticipates unsafe behavior by predicting motion patterns from recent state-action history.
 
-## Saved models
-The saved_models directory contains some pretrained models from a few hyperparameter sweeps. Several of the gamma sweep
-models reached high performance and can be used for testing.
+4. **Anomaly-Triggered Control Mode Switching (ATCMS)**
+   A rule-based safety module that activates fallback control (e.g. LQR or constant thrust) when instability is detected or predicted.
+
+---
+
+## 🚁 Environment
+
+All components are developed around a 2D Gymnasium environment (`QuadPole2D`) that simulates a quadrotor carrying a pendulum payload. The agent must reach goal waypoints while keeping the pendulum upright and stable.
+
+Key environment features:
+
+* 12D observation space: quadrotor position, velocity, pitch, pendulum angle and angular velocity, and waypoint goal position.
+* 2D action space: rotor thrusts
+* Configurable reward shaping and curriculum learning
+* Compatible with Stable-Baselines3
+
+---
+
+## 📁 Repository Structure
+
+```
+├── results/                    # Plots and other results from experiments
+├── configs/                    # .json config files for training
+├── saved_models/               # Pretrained RL models that can be loaded for evaluation
+├── evaluate_agents.py          # Load a group of trained agents to evaluate and compare them
+├── quadrotor_env.py            # Contians the QuadPole2D environment class
+├── run_hybrid_agent.py         # Run and evaluate a hybrid RL + LQR agent
+├── run_rl_agent.py             # Run and evaluate a RL agent
+├── test_env_human.py           # Allows the user to play the environment using keyboard inputs
+├── train.py                    # Main training script for the RL policies
+```
+
+## Acknowledgments
+
+This work was developed as part of the CS 7643: Deep Learning course at Georgia Tech. We thank Dr. Zzolt Kira and the TAs for their guidance.
