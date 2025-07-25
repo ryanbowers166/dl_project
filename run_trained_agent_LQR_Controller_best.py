@@ -11,7 +11,7 @@ from stable_baselines3 import PPO
 from scipy.linalg import solve_continuous_are, solve_discrete_are
 from numpy.linalg import LinAlgError
 
-from training_pipeline import QuadPole2DWrapper, QuadPole2D
+from train import QuadPole2DWrapper, QuadPole2D
 
 
 # === Utility functions ===
@@ -77,7 +77,7 @@ def safety_policy(obs, K, x0):
 # === Main testing pipeline ===
 def test_agent_combined(config, render_mode, model_path,
                         mode="intervene", n_episodes=3,
-                        manual_goal_position=None):
+                        manual_goal_position=None, live_plot=False,save_summary_plot=False):
     pygame.init()
     width, height = 800, 1000
     screen = pygame.display.set_mode((width, height))
@@ -171,54 +171,61 @@ def test_agent_combined(config, render_mode, model_path,
             done = term or trunc
 
             # Live pygame rendering
-            fig, axs = plt.subplots(4, 1, figsize=(8, 14),
-                                    gridspec_kw={'height_ratios': [2, 1, 1, 0.5]})
-            ax1, ax2, ax3, ax4 = axs
-            ax1.set_facecolor('lightblue')
-            env.env.render(ax1, observation=obs)
-            label = f"Anomaly: {anomaly}" if anomaly else "Anomaly: None"
-            color = 'red' if anomaly == "severe" else 'orange' if anomaly == "mild" else 'green'
-            ax1.text(0.02, 0.95, label, color=color, transform=ax1.transAxes,
-                     bbox=dict(facecolor='white', edgecolor=color))
-            ax1.text(0.02, 0.90, f"Ep {ep+1}, Step {step+1}", transform=ax1.transAxes)
-            ax1.set_title("Simulation")
+            if live_plot:
+                fig, axs = plt.subplots(4, 1, figsize=(8, 14),
+                                        gridspec_kw={'height_ratios': [2, 1, 1, 0.5]})
+                ax1, ax2, ax3, ax4 = axs
+                ax1.set_facecolor('lightblue')
+                #env.env.render(ax1, observation=obs)
+                env.env.render(screen)
+                label = f"Anomaly: {anomaly}" if anomaly else "Anomaly: None"
+                color = 'red' if anomaly == "severe" else 'orange' if anomaly == "mild" else 'green'
+                ax1.text(0.02, 0.95, label, color=color, transform=ax1.transAxes,
+                         bbox=dict(facecolor='white', edgecolor=color))
+                ax1.text(0.02, 0.90, f"Ep {ep+1}, Step {step+1}", transform=ax1.transAxes)
+                ax1.set_title("Simulation")
 
-            t = np.arange(len(logs["tilt_deg"]))
-            ax2.plot(t, logs["tilt_deg"], label='Tilt (°)', color='purple')
-            ax2.plot(t, logs["lin_vel"], label='Lin Vel', color='blue')
-            ax2.plot(t, logs["ang_vel"], label='Ang Vel', color='green')
-            for i, a in enumerate(logs["anomaly"]):
-                if a == "severe":
-                    ax2.axvline(i, color='red', linestyle='--', alpha=0.3)
-                elif a == "mild":
-                    ax2.axvline(i, color='orange', linestyle='--', alpha=0.2)
-            ax2.set_title("State Metrics"); ax2.legend(); ax2.grid(alpha=0.4)
+                t = np.arange(len(logs["tilt_deg"]))
+                ax2.plot(t, logs["tilt_deg"], label='Tilt (°)', color='purple')
+                ax2.plot(t, logs["lin_vel"], label='Lin Vel', color='blue')
+                ax2.plot(t, logs["ang_vel"], label='Ang Vel', color='green')
+                for i, a in enumerate(logs["anomaly"]):
+                    if a == "severe":
+                        ax2.axvline(i, color='red', linestyle='--', alpha=0.3)
+                    elif a == "mild":
+                        ax2.axvline(i, color='orange', linestyle='--', alpha=0.2)
+                ax2.set_title("State Metrics"); ax2.legend(); ax2.grid(alpha=0.4)
 
-            ax3.plot(t, logs["pos_x"], label='X', color='r')
-            ax3.plot(t, logs["pos_y"], label='Y', color='g')
-            ax3.plot(t, logs["pos_z"], label='Z', color='b')
-            ax3.set_title("Position")
-            ax3.legend()
-            ax3.grid(alpha=0.4)
+                ax3.plot(t, logs["pos_x"], label='X', color='r')
+                ax3.plot(t, logs["pos_y"], label='Y', color='g')
+                ax3.plot(t, logs["pos_z"], label='Z', color='b')
+                ax3.set_title("Position")
+                ax3.legend()
+                ax3.grid(alpha=0.4)
 
-            mode_numeric = [1 if m == "LQR" else 0 for m in logs["control_mode"]]
-            ax4.step(t, mode_numeric, where='post', color='black', linewidth=2)
-            ax4.set_yticks([0, 1])
-            ax4.set_yticklabels(["Agent", "LQR"])
-            ax4.set_title("Control Mode")
-            ax4.set_xlabel("Timestep")
-            ax4.grid(alpha=0.4)
+                mode_numeric = [1 if m == "LQR" else 0 for m in logs["control_mode"]]
+                ax4.step(t, mode_numeric, where='post', color='black', linewidth=2)
+                ax4.set_yticks([0, 1])
+                ax4.set_yticklabels(["Agent", "LQR"])
+                ax4.set_title("Control Mode")
+                ax4.set_xlabel("Timestep")
+                ax4.grid(alpha=0.4)
 
-            # Draw on pygame screen
-            canvas = agg.FigureCanvasAgg(fig)
-            canvas.draw()
-            surf = pygame.image.frombuffer(canvas.buffer_rgba(),
-                                           canvas.get_width_height(), 'RGBA')
-            screen.blit(pygame.transform.scale(surf, (width, height)), (0, 0))
+                # Draw on pygame screen
+                canvas = agg.FigureCanvasAgg(fig)
+                canvas.draw()
+                surf = pygame.image.frombuffer(canvas.buffer_rgba(),
+                                               canvas.get_width_height(), 'RGBA')
+                screen.blit(pygame.transform.scale(surf, (width, height)), (0, 0))
+                plt.close(fig)
             pygame.display.flip()
-            plt.close(fig)
+
 
             step += 1
+        reached_times = [t for g, t in env.env.goal_reach_times if t != -1]
+        goal_1_time = reached_times[0] if len(reached_times) > 0 else -1
+        goal_2_time = reached_times[1] if len(reached_times) > 1 else -1
+        goal_3_time = reached_times[2] if len(reached_times) > 2 else -1
 
         # Episode finished — print summary
         lqr_duration = sum(1 for m in logs["control_mode"] if m == "LQR")
@@ -247,55 +254,60 @@ def test_agent_combined(config, render_mode, model_path,
             "max_tilt_deg": max(logs["tilt_deg"]),
             "mean_lin_vel": np.mean(logs["lin_vel"]),
             "mean_ang_vel": np.mean(logs["ang_vel"]),
+            "time_balanced": env.env.total_time_balanced,
+            "goal1_reach_time": goal_1_time,
+            "goal2_reach_time": goal_2_time,
+            #"goal3_reach_time": goal_3_time
+
         })
-
         # === Save summary plot of entire episode ===
-        fig, axs = plt.subplots(4, 1, figsize=(8, 14),
-                                gridspec_kw={'height_ratios': [2, 1, 1, 0.5]})
-        ax1, ax2, ax3, ax4 = axs
-        ax1.set_facecolor('lightblue')
-        # Render last observation as a snapshot
-        env.env.render(ax1, observation=obs)
-        label = f"Anomaly: {logs['anomaly'][-1]}" if logs['anomaly'][-1] else "Anomaly: None"
-        color = 'red' if logs['anomaly'][-1] == "severe" else 'orange' if logs['anomaly'][-1] == "mild" else 'green'
-        ax1.text(0.02, 0.95, label, color=color, transform=ax1.transAxes,
-                 bbox=dict(facecolor='white', edgecolor=color))
-        ax1.text(0.02, 0.90, f"Episode {ep+1} Summary", transform=ax1.transAxes)
-        ax1.set_title("Simulation Snapshot")
+        if save_summary_plot:
+            fig, axs = plt.subplots(4, 1, figsize=(8, 14),
+                                    gridspec_kw={'height_ratios': [2, 1, 1, 0.5]})
+            ax1, ax2, ax3, ax4 = axs
+            ax1.set_facecolor('lightblue')
+            # Render last observation as a snapshot
+            env.env.render(ax1, observation=obs)
+            label = f"Anomaly: {logs['anomaly'][-1]}" if logs['anomaly'][-1] else "Anomaly: None"
+            color = 'red' if logs['anomaly'][-1] == "severe" else 'orange' if logs['anomaly'][-1] == "mild" else 'green'
+            ax1.text(0.02, 0.95, label, color=color, transform=ax1.transAxes,
+                     bbox=dict(facecolor='white', edgecolor=color))
+            ax1.text(0.02, 0.90, f"Episode {ep+1} Summary", transform=ax1.transAxes)
+            ax1.set_title("Simulation Snapshot")
 
-        t = np.arange(step)
-        ax2.plot(t, logs["tilt_deg"], label='Tilt (°)', color='purple')
-        ax2.plot(t, logs["lin_vel"], label='Lin Vel', color='blue')
-        ax2.plot(t, logs["ang_vel"], label='Ang Vel', color='green')
-        for i, a in enumerate(logs["anomaly"]):
-            if a == "severe":
-                ax2.axvline(i, color='red', linestyle='--', alpha=0.3)
-            elif a == "mild":
-                ax2.axvline(i, color='orange', linestyle='--', alpha=0.2)
-        ax2.set_title("State Metrics")
-        ax2.legend()
-        ax2.grid(alpha=0.4)
+            t = np.arange(step)
+            ax2.plot(t, logs["tilt_deg"], label='Tilt (°)', color='purple')
+            ax2.plot(t, logs["lin_vel"], label='Lin Vel', color='blue')
+            ax2.plot(t, logs["ang_vel"], label='Ang Vel', color='green')
+            for i, a in enumerate(logs["anomaly"]):
+                if a == "severe":
+                    ax2.axvline(i, color='red', linestyle='--', alpha=0.3)
+                elif a == "mild":
+                    ax2.axvline(i, color='orange', linestyle='--', alpha=0.2)
+            ax2.set_title("State Metrics")
+            ax2.legend()
+            ax2.grid(alpha=0.4)
 
-        ax3.plot(t, logs["pos_x"], label='X', color='r')
-        ax3.plot(t, logs["pos_y"], label='Y', color='g')
-        ax3.plot(t, logs["pos_z"], label='Z', color='b')
-        ax3.set_title("Position")
-        ax3.legend()
-        ax3.grid(alpha=0.4)
+            ax3.plot(t, logs["pos_x"], label='X', color='r')
+            ax3.plot(t, logs["pos_y"], label='Y', color='g')
+            ax3.plot(t, logs["pos_z"], label='Z', color='b')
+            ax3.set_title("Position")
+            ax3.legend()
+            ax3.grid(alpha=0.4)
 
-        mode_numeric = [1 if m == "LQR" else 0 for m in logs["control_mode"]]
-        ax4.step(t, mode_numeric, where='post', color='black', linewidth=2)
-        ax4.set_yticks([0, 1])
-        ax4.set_yticklabels(["Agent", "LQR"])
-        ax4.set_title("Control Mode")
-        ax4.set_xlabel("Timestep")
-        ax4.grid(alpha=0.4)
+            mode_numeric = [1 if m == "LQR" else 0 for m in logs["control_mode"]]
+            ax4.step(t, mode_numeric, where='post', color='black', linewidth=2)
+            ax4.set_yticks([0, 1])
+            ax4.set_yticklabels(["Agent", "LQR"])
+            ax4.set_title("Control Mode")
+            ax4.set_xlabel("Timestep")
+            ax4.grid(alpha=0.4)
 
-        summary_plot_path = os.path.join(save_dir, f"episode_{ep+1}_summary.png")
-        plt.tight_layout()
-        fig.savefig(summary_plot_path)
-        plt.close(fig)
-        print(f"Saved episode summary plot to {summary_plot_path}")
+            summary_plot_path = os.path.join(save_dir, f"episode_{ep+1}_summary.png")
+            plt.tight_layout()
+            fig.savefig(summary_plot_path)
+            plt.close(fig)
+            print(f"Saved episode summary plot to {summary_plot_path}")
 
     pygame.quit()
 
@@ -303,6 +315,7 @@ def test_agent_combined(config, render_mode, model_path,
     df_metrics = pd.DataFrame(all_episode_metrics)
     df_metrics.to_csv("evaluation_metrics.csv", index=False)
     print("Saved evaluation metrics to evaluation_metrics.csv")
+    return all_episode_metrics
 
 
 # === Script entry point ===

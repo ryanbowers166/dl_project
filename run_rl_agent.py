@@ -7,7 +7,7 @@ import pygame
 import json
 
 from stable_baselines3 import PPO
-from training_pipeline import QuadPole2DWrapper
+from train import QuadPole2DWrapper
 import matplotlib.pyplot as plt
 
 from quadrotor_env import QuadPole2D

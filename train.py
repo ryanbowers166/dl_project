@@ -2,19 +2,14 @@ import multiprocessing
 from datetime import datetime
 import numpy as np
 import gymnasium as gym
-import matplotlib.pyplot as plt
-import matplotlib.backends.backend_agg as agg
 import pygame
 import json
-
 from stable_baselines3 import PPO
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3.common.callbacks import EvalCallback, BaseCallback, CheckpointCallback
-import matplotlib.pyplot as plt
 import wandb
 from wandb.integration.sb3 import WandbCallback
-
 from quadrotor_env import QuadPole2D
 
 class QuadPole2DWrapper(gym.Env):
