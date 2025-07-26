@@ -45,6 +45,7 @@ Key environment features:
 ├── saved_models/                                    # Pretrained RL models that can be loaded for evaluation
 ├── evaluate_all_policies.py                         # Load a group of trained agents to evaluate and compare them, with or without the LQR safety controller.
 ├── quadrotor_env.py                                 # Contians the QuadPole2D environment class
+├── reward_sweep.py                                  # Run reward sweeping
 ├── run_trained_agent_with_LQR_Controller.py         # Run and evaluate a hybrid RL + LQR agent
 ├── run_rl_agent.py                                  # Run and evaluate a RL agent
 ├── test_env_human.py                                # Allows the user to play the environment using keyboard inputs
